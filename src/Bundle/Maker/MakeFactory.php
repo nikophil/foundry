@@ -65,10 +65,6 @@ final class MakeFactory extends AbstractMaker
             $input->setOption('no-persistence', true);
         }
 
-        if ($input->getArgument('class')) {
-            return;
-        }
-
         if (!$input->getOption('test')) {
             $io->text('// Note: pass <fg=yellow>--test</> if you want to generate factories in your <fg=yellow>tests/</> directory');
             $io->newLine();
@@ -77,6 +73,10 @@ final class MakeFactory extends AbstractMaker
         if (!$input->getOption('all-fields')) {
             $io->text('// Note: pass <fg=yellow>--all-fields</> if you want to generate default values for all fields, not only required fields');
             $io->newLine();
+        }
+
+        if ($input->getArgument('class')) {
+            return;
         }
 
         if ($input->getOption('no-persistence')) {
@@ -105,7 +105,7 @@ final class MakeFactory extends AbstractMaker
         $classes = 'All' === $class ? $this->entityChoices() : [$class];
 
         foreach ($classes as $class) {
-            $this->factoryGenerator->generateFactory($class, MakeFactoryQuery::fromInput($input, $generator));
+            $this->factoryGenerator->generateFactory($io, MakeFactoryQuery::fromInput($input, $generator, $class));
         }
 
         $generator->writeChanges();

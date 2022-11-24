@@ -12,14 +12,14 @@ final class MakeFactoryQuery
     {
     }
 
-    public static function fromInput(InputInterface $input, Generator $generator): self
+    public static function fromInput(InputInterface $input, Generator $generator, string $class): self
     {
         return new self(
             namespace: $input->getOption('namespace'),
             test: (bool) $input->getOption('test'),
             persisted: !$input->getOption('no-persistence'),
             allFields: (bool) $input->getOption('all-fields'),
-            class: $input->getArgument('class'),
+            class: $class,
             generator: $generator
         );
     }
@@ -52,5 +52,13 @@ final class MakeFactoryQuery
     public function getGenerator(): Generator
     {
         return $this->generator;
+    }
+
+    public function withClass(string $class): self
+    {
+        $clone = clone $this;
+        $clone->class = $class;
+
+        return $clone;
     }
 }

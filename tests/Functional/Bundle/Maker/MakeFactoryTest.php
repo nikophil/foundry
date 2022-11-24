@@ -8,6 +8,7 @@ use Symfony\Component\Console\Tester\CommandTester;
 use Zenstruck\Foundry\Tests\Fixtures\Document\ODMComment;
 use Zenstruck\Foundry\Tests\Fixtures\Document\ODMPost;
 use Zenstruck\Foundry\Tests\Fixtures\Entity\Category;
+use Zenstruck\Foundry\Tests\Fixtures\Entity\Comment;
 use Zenstruck\Foundry\Tests\Fixtures\Entity\Contact;
 use Zenstruck\Foundry\Tests\Fixtures\Entity\EntityWithRelations;
 use Zenstruck\Foundry\Tests\Fixtures\Entity\Post as ORMPost;
@@ -16,6 +17,7 @@ use Zenstruck\Foundry\Tests\Fixtures\Factories\CategoryFactory;
 use Zenstruck\Foundry\Tests\Fixtures\Factories\EntityForRelationsFactory;
 use Zenstruck\Foundry\Tests\Fixtures\Factories\ODM\CommentFactory;
 use Zenstruck\Foundry\Tests\Fixtures\Factories\ODM\UserFactory;
+use Zenstruck\Foundry\Tests\Fixtures\Factories\PostFactory;
 use Zenstruck\Foundry\Tests\Fixtures\Kernel;
 use Zenstruck\Foundry\Tests\Fixtures\Object\SomeObject;
 
@@ -51,9 +53,17 @@ final class MakeFactoryTest extends MakerTestCase
             self::markTestSkipped('doctrine/orm not enabled.');
         }
 
-        $tester = new CommandTester((new Application(self::bootKernel()))->find('make:factory'));
+        $kernel = Kernel::create(factoriesRegistered: [PostFactory::class]);
+        $kernel->boot();
+
+        $tester = new CommandTester((new Application($kernel))->find('make:factory'));
 
         $tester->execute(['class' => Category::class]);
+
+        $output = $tester->getDisplay();
+
+        $this->assertStringNotContainsString(ORMPost::class, $output);
+        $this->assertStringContainsString('Note: pass --test if you want to generate factories in your tests/ directory', $output);
 
         $this->assertFileFromMakerSameAsExpectedFile(self::tempFile('src/Factory/CategoryFactory.php'));
     }
@@ -67,20 +77,17 @@ final class MakeFactoryTest extends MakerTestCase
             self::markTestSkipped('doctrine/orm not enabled.');
         }
 
-        $kernel = Kernel::create(factoriesRegistered: [CategoryFactory::class]);
-        $kernel->boot();
+        $tester = new CommandTester((new Application(self::bootKernel()))->find('make:factory'));
 
-        $tester = new CommandTester((new Application($kernel))->find('make:factory'));
-
-        $tester->setInputs([Tag::class]);
-        $tester->execute([]);
+        $tester->setInputs([Comment::class, 'no', 'yes']);
+        $tester->execute([], ['interactive' => true]);
 
         $output = $tester->getDisplay();
+        $this->assertStringContainsString('A factory for class "Zenstruck\Foundry\Tests\Fixtures\Entity\User" is missing for field Comment::$user. Do you want to create it?', $output);
 
-        $this->assertStringNotContainsString(Category::class, $output);
-        $this->assertStringContainsString('Note: pass --test if you want to generate factories in your tests/ directory', $output);
-
-        $this->assertFileFromMakerSameAsExpectedFile(self::tempFile('src/Factory/TagFactory.php'));
+        $this->assertFileDoesNotExist(self::tempFile('src/Factory/UserFactory.php'));
+        $this->assertFileExists(self::tempFile('src/Factory/PostFactory.php'));
+        $this->assertFileFromMakerSameAsExpectedFile(self::tempFile('src/Factory/CommentFactory.php'));
     }
 
     /**

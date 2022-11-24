@@ -4,6 +4,7 @@ namespace Zenstruck\Foundry\Bundle\Maker\Factory;
 
 use Doctrine\Persistence\ManagerRegistry;
 use Doctrine\Persistence\Mapping\ClassMetadata;
+use Symfony\Component\Console\Style\SymfonyStyle;
 
 /** @internal  */
 abstract class AbstractDoctrineDefaultPropertiesGuesser implements DefaultPropertiesGuesser
@@ -13,10 +14,16 @@ abstract class AbstractDoctrineDefaultPropertiesGuesser implements DefaultProper
     }
 
     /** @param class-string $fieldClass */
-    protected function addDefaultValueUsingFactory(MakeFactoryData $makeFactoryData, MakeFactoryQuery $makeFactoryQuery, string $fieldName, string $fieldClass, bool $isMultiple = false): void
+    protected function addDefaultValueUsingFactory(SymfonyStyle $io, MakeFactoryData $makeFactoryData, MakeFactoryQuery $makeFactoryQuery, string $fieldName, string $fieldClass, bool $isMultiple = false): void
     {
         if (!$factoryClass = $this->factoryFinder->getFactoryForClass($fieldClass)) {
-            $factoryClass = $this->factoryGenerator->generateFactory($fieldClass, $makeFactoryQuery);
+            if ($makeFactoryQuery->isAllFields() || $io->confirm("A factory for class \"{$fieldClass}\" is missing for field {$makeFactoryData->getObjectShortName()}::\${$fieldName}. Do you want to create it?")) {
+                $factoryClass = $this->factoryGenerator->generateFactory($io, $makeFactoryQuery->withClass($fieldClass));
+            } else {
+                $makeFactoryData->addDefaultProperty(\lcfirst($fieldName), "null, // TODO add {$fieldClass} type manually");
+
+                return;
+            }
         }
 
         $factoryMethod = $isMultiple ? 'new()->many(5)' : 'new()';

@@ -5,6 +5,7 @@ namespace Zenstruck\Foundry\Bundle\Maker\Factory;
 use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Bundle\MakerBundle\Exception\RuntimeCommandException;
 use Symfony\Bundle\MakerBundle\Generator;
+use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\HttpKernel\KernelInterface;
 
 /** @internal */
@@ -16,12 +17,11 @@ final class FactoryGenerator
     }
 
     /**
-     * @param class-string $class
-     *
      * @return class-string The factory's FQCN
      */
-    public function generateFactory(string $class, MakeFactoryQuery $makeFactoryQuery): string
+    public function generateFactory(SymfonyStyle $io, MakeFactoryQuery $makeFactoryQuery): string
     {
+        $class = $makeFactoryQuery->getClass();
         $generator = $makeFactoryQuery->getGenerator();
 
         if (!\class_exists($class)) {
@@ -43,7 +43,7 @@ final class FactoryGenerator
 
         foreach ($this->defaultPropertiesGuessers as $defaultPropertiesGuesser) {
             if ($defaultPropertiesGuesser->supports($makeFactoryData)) {
-                $defaultPropertiesGuesser($makeFactoryData, $makeFactoryQuery);
+                $defaultPropertiesGuesser($io, $makeFactoryData, $makeFactoryQuery);
             }
         }
 

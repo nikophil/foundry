@@ -4,6 +4,7 @@ namespace Zenstruck\Foundry\Bundle\Maker\Factory;
 
 use Doctrine\ODM\MongoDB\Mapping\ClassMetadata as ODMClassMetadata;
 use Doctrine\ORM\Mapping\ClassMetadataInfo as ORMClassMetadata;
+use Symfony\Component\Console\Style\SymfonyStyle;
 
 /**
  * @internal
@@ -19,6 +20,7 @@ final class DoctrineScalarFieldsDefaultPropertiesGuesser extends AbstractDoctrin
         'DATE' => 'self::faker()->dateTime(),',
         'DATE_MUTABLE' => 'self::faker()->dateTime(),',
         'DATE_IMMUTABLE' => '\DateTimeImmutable::createFromMutable(self::faker()->dateTime()),',
+        'DATETIME' => 'self::faker()->dateTime(),',
         'DATETIME_MUTABLE' => 'self::faker()->dateTime(),',
         'DATETIME_IMMUTABLE' => '\DateTimeImmutable::createFromMutable(self::faker()->dateTime()),',
         'DATETIMETZ_MUTABLE' => 'self::faker()->dateTime(),',
@@ -37,7 +39,7 @@ final class DoctrineScalarFieldsDefaultPropertiesGuesser extends AbstractDoctrin
         'TIME_IMMUTABLE' => '\DateTimeImmutable::createFromMutable(self::faker()->datetime()),',
     ];
 
-    public function __invoke(MakeFactoryData $makeFactoryData, MakeFactoryQuery $makeFactoryQuery): void
+    public function __invoke(SymfonyStyle $io, MakeFactoryData $makeFactoryData, MakeFactoryQuery $makeFactoryQuery): void
     {
         /** @var ODMClassMetadata|ORMClassMetadata $metadata */
         $metadata = $this->getClassMetadata($makeFactoryData);
