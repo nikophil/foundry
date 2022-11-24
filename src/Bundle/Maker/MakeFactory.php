@@ -14,17 +14,16 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\HttpKernel\KernelInterface;
-use Zenstruck\Foundry\Bundle\Maker\Factory\DefaultPropertiesGuesser;
 use Zenstruck\Foundry\Bundle\Maker\Factory\FactoryFinder;
-use Zenstruck\Foundry\Bundle\Maker\Factory\MakeFactoryData;
+use Zenstruck\Foundry\Bundle\Maker\Factory\FactoryGenerator;
+use Zenstruck\Foundry\Bundle\Maker\Factory\MakeFactoryQuery;
 
 /**
  * @author Kevin Bond <kevinbond@gmail.com>
  */
 final class MakeFactory extends AbstractMaker
 {
-    /** @param \Traversable<int, DefaultPropertiesGuesser> $defaultPropertiesGuessers */
-    public function __construct(private ManagerRegistry $managerRegistry, private FactoryFinder $factoryFinder, private KernelInterface $kernel, private \Traversable $defaultPropertiesGuessers)
+    public function __construct(private ManagerRegistry $managerRegistry, private FactoryFinder $factoryFinder, private KernelInterface $kernel, private FactoryGenerator $factoryGenerator)
     {
     }
 
@@ -106,44 +105,8 @@ final class MakeFactory extends AbstractMaker
         $classes = 'All' === $class ? $this->entityChoices() : [$class];
 
         foreach ($classes as $class) {
-            $this->generateFactory($class, $input, $io, $generator);
+            $this->factoryGenerator->generateFactory($class, MakeFactoryQuery::fromInput($input, $generator));
         }
-    }
-
-    /**
-     * Generates a single entity factory.
-     */
-    private function generateFactory(string $class, InputInterface $input, ConsoleStyle $io, Generator $generator): void
-    {
-        if (!\class_exists($class)) {
-            $class = $generator->createClassNameDetails($class, 'Entity\\')->getFullName();
-        }
-
-        if (!\class_exists($class)) {
-            throw new RuntimeCommandException(\sprintf('Class "%s" not found.', $input->getArgument('class')));
-        }
-
-        $makeFactoryData = $this->createMakeFactoryData($class, !$input->getOption('no-persistence'));
-
-        $factory = $generator->createClassNameDetails(
-            $makeFactoryData->getObjectShortName(),
-            $this->guessNamespace($generator, $input->getOption('namespace'), (bool) $input->getOption('test')),
-            'Factory'
-        );
-
-        foreach ($this->defaultPropertiesGuessers as $defaultPropertiesGuesser) {
-            if ($defaultPropertiesGuesser->supports($makeFactoryData)) {
-                $defaultPropertiesGuesser($makeFactoryData, $input->getOption('all-fields'));
-            }
-        }
-
-        $generator->generateClass(
-            $factory->getFullName(),
-            __DIR__.'/../Resources/skeleton/Factory.tpl.php',
-            [
-                'makeFactoryData' => $makeFactoryData,
-            ]
-        );
 
         $generator->writeChanges();
 
@@ -183,11 +146,6 @@ final class MakeFactory extends AbstractMaker
         return $choices;
     }
 
-    private function phpstanEnabled(): bool
-    {
-        return \file_exists("{$this->kernel->getProjectDir()}/vendor/phpstan/phpstan/phpstan");
-    }
-
     private function doctrineEnabled(): bool
     {
         try {
@@ -207,41 +165,5 @@ final class MakeFactory extends AbstractMaker
         }
 
         return $ormEnabled || $odmEnabled;
-    }
-
-    /**
-     * @param class-string $class
-     */
-    private function createMakeFactoryData(string $class, bool $persisted): MakeFactoryData
-    {
-        $object = new \ReflectionClass($class);
-
-        if ($persisted) {
-            $repository = new \ReflectionClass($this->managerRegistry->getRepository($object->getName()));
-
-            if (\str_starts_with($repository->getName(), 'Doctrine')) {
-                // not using a custom repository
-                $repository = null;
-            }
-        }
-
-        return new MakeFactoryData($object, $repository ?? null, $this->phpstanEnabled(), $persisted);
-    }
-
-    private function guessNamespace(Generator $generator, string $namespace, bool $test): string
-    {
-        // strip maker's root namespace if set
-        if (0 === \mb_strpos($namespace, $generator->getRootNamespace())) {
-            $namespace = \mb_substr($namespace, \mb_strlen($generator->getRootNamespace()));
-        }
-
-        $namespace = \trim($namespace, '\\');
-
-        // if creating in tests dir, ensure namespace prefixed with Tests\
-        if ($test && 0 !== \mb_strpos($namespace, 'Tests\\')) {
-            $namespace = 'Tests\\'.$namespace;
-        }
-
-        return $namespace;
     }
 }

@@ -6,7 +6,6 @@ use Zenstruck\Foundry\ModelFactory;
 use Zenstruck\Foundry\Proxy;
 use Zenstruck\Foundry\Tests\Fixtures\Document\ODMPost;
 use Zenstruck\Foundry\Tests\Fixtures\Factories\ODM\CommentFactory;
-use Zenstruck\Foundry\Tests\Fixtures\Factories\ODM\UserFactory;
 
 /**
  * @extends ModelFactory<ODMPost>
@@ -52,7 +51,7 @@ final class ODMPostFactory extends ModelFactory
             'publishedAt' => self::faker()->dateTime(),
             'shortDescription' => self::faker()->text(),
             'title' => self::faker()->text(),
-            'user' => UserFactory::new(),
+            'user' => ODMUserFactory::new(),
             'viewCount' => self::faker()->randomNumber(),
         ];
     }

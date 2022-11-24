@@ -6,13 +6,12 @@ use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Bundle\MakerBundle\Exception\RuntimeCommandException;
 use Symfony\Component\Console\Tester\CommandTester;
 use Zenstruck\Foundry\Tests\Fixtures\Document\ODMComment;
-use Zenstruck\Foundry\Tests\Fixtures\Document\ODMPost as ODMPost;
+use Zenstruck\Foundry\Tests\Fixtures\Document\ODMPost;
 use Zenstruck\Foundry\Tests\Fixtures\Entity\Category;
 use Zenstruck\Foundry\Tests\Fixtures\Entity\Contact;
 use Zenstruck\Foundry\Tests\Fixtures\Entity\EntityWithRelations;
 use Zenstruck\Foundry\Tests\Fixtures\Entity\Post as ORMPost;
 use Zenstruck\Foundry\Tests\Fixtures\Entity\Tag;
-use Zenstruck\Foundry\Tests\Fixtures\Factories\AddressFactory;
 use Zenstruck\Foundry\Tests\Fixtures\Factories\CategoryFactory;
 use Zenstruck\Foundry\Tests\Fixtures\Factories\EntityForRelationsFactory;
 use Zenstruck\Foundry\Tests\Fixtures\Factories\ODM\CommentFactory;
@@ -396,7 +395,7 @@ final class MakeFactoryTest extends MakerTestCase
      * @test
      * @dataProvider objectsWithEmbeddableProvider
      */
-    public function can_create_factory_with_embeddable(string $objectClass, string $factoryName, array $factoriesRegistered = []): void
+    public function can_create_factory_with_embeddable(string $objectClass, string $objectFactoryName, string $embeddableObjectFactoryName, array $factoriesRegistered = []): void
     {
         $kernel = Kernel::create(factoriesRegistered: $factoriesRegistered);
         $kernel->boot();
@@ -405,17 +404,18 @@ final class MakeFactoryTest extends MakerTestCase
 
         $tester->execute(['class' => $objectClass, '--all-fields' => true]);
 
-        $this->assertFileFromMakerSameAsExpectedFile(self::tempFile("src/Factory/{$factoryName}.php"));
+        $this->assertFileExists(self::tempFile("src/Factory/{$embeddableObjectFactoryName}.php"));
+        $this->assertFileFromMakerSameAsExpectedFile(self::tempFile("src/Factory/{$objectFactoryName}.php"));
     }
 
     public function objectsWithEmbeddableProvider(): iterable
     {
         if (\getenv('USE_ORM')) {
-            yield 'orm' => [Contact::class, 'ContactFactory', [AddressFactory::class]];
+            yield 'orm' => [Contact::class, 'ContactFactory', 'AddressFactory'];
         }
 
         if (\getenv('USE_ODM')) {
-            yield 'odm' => [ODMPost::class, 'ODMPostFactory', [CommentFactory::class, UserFactory::class]];
+            yield 'odm' => [ODMPost::class, 'ODMPostFactory', 'ODMUserFactory', [CommentFactory::class]];
         }
     }
 

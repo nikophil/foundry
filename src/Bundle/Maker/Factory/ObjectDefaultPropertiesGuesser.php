@@ -17,11 +17,11 @@ class ObjectDefaultPropertiesGuesser implements DefaultPropertiesGuesser
         \DateTimeImmutable::class => '\DateTimeImmutable::createFromMutable(self::faker()->dateTime()),',
     ];
 
-    public function __invoke(MakeFactoryData $makeFactoryData, bool $allFields): void
+    public function __invoke(MakeFactoryData $makeFactoryData, MakeFactoryQuery $makeFactoryQuery): void
     {
         foreach ($makeFactoryData->getObject()->getProperties() as $property) {
             // ignore identifiers and nullable fields
-            if (!$allFields && ($property->hasDefaultValue() || !$property->hasType() || $property->getType()?->allowsNull())) {
+            if (!$makeFactoryQuery->isAllFields() && ($property->hasDefaultValue() || !$property->hasType() || $property->getType()?->allowsNull())) {
                 continue;
             }
 

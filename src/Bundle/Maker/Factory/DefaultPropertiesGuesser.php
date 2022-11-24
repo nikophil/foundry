@@ -7,7 +7,7 @@ namespace Zenstruck\Foundry\Bundle\Maker\Factory;
  */
 interface DefaultPropertiesGuesser
 {
-    public function __invoke(MakeFactoryData $makeFactoryData, bool $allFields): void;
+    public function __invoke(MakeFactoryData $makeFactoryData, MakeFactoryQuery $makeFactoryQuery): void;
 
     public function supports(MakeFactoryData $makeFactoryData): bool;
 }

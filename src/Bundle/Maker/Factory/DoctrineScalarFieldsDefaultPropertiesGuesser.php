@@ -1,7 +1,5 @@
 <?php
 
-declare(strict_types=1);
-
 namespace Zenstruck\Foundry\Bundle\Maker\Factory;
 
 use Doctrine\ODM\MongoDB\Mapping\ClassMetadata as ODMClassMetadata;
@@ -39,7 +37,7 @@ final class DoctrineScalarFieldsDefaultPropertiesGuesser extends AbstractDoctrin
         'TIME_IMMUTABLE' => '\DateTimeImmutable::createFromMutable(self::faker()->datetime()),',
     ];
 
-    public function __invoke(MakeFactoryData $makeFactoryData, bool $allFields): void
+    public function __invoke(MakeFactoryData $makeFactoryData, MakeFactoryQuery $makeFactoryQuery): void
     {
         /** @var ODMClassMetadata|ORMClassMetadata $metadata */
         $metadata = $this->getClassMetadata($makeFactoryData);
@@ -60,7 +58,7 @@ final class DoctrineScalarFieldsDefaultPropertiesGuesser extends AbstractDoctrin
             }
 
             // ignore identifiers and nullable fields
-            if ((!$allFields && ($property['nullable'] ?? false)) || \in_array($fieldName, $ids, true)) {
+            if ((!$makeFactoryQuery->isAllFields() && ($property['nullable'] ?? false)) || \in_array($fieldName, $ids, true)) {
                 continue;
             }
 

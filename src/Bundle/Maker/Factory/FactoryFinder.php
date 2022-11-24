@@ -1,7 +1,5 @@
 <?php
 
-declare(strict_types=1);
-
 namespace Zenstruck\Foundry\Bundle\Maker\Factory;
 
 use Zenstruck\Foundry\ModelFactory;
@@ -49,5 +47,18 @@ final class FactoryFinder
         $factories = \array_flip($this->classesWithFactories);
 
         return $factories[$class] ?? null;
+    }
+
+    /**
+     * @param class-string $factoryClass
+     * @param class-string $class
+     */
+    public function addFactoryForClass(string $factoryClass, string $class): void
+    {
+        if (\array_key_exists($factoryClass, $this->classesWithFactories)) {
+            throw new \InvalidArgumentException("Factory \"{$factoryClass}\" already exists.");
+        }
+
+        $this->classesWithFactories[$factoryClass] = $class;
     }
 }

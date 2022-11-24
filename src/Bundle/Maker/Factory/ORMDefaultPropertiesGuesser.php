@@ -9,7 +9,7 @@ use Doctrine\ORM\Mapping\ClassMetadataInfo as ORMClassMetadata;
  */
 class ORMDefaultPropertiesGuesser extends AbstractDoctrineDefaultPropertiesGuesser
 {
-    public function __invoke(MakeFactoryData $makeFactoryData, bool $allFields): void
+    public function __invoke(MakeFactoryData $makeFactoryData, MakeFactoryQuery $makeFactoryQuery): void
     {
         $metadata = $this->getClassMetadata($makeFactoryData);
 
@@ -17,8 +17,8 @@ class ORMDefaultPropertiesGuesser extends AbstractDoctrineDefaultPropertiesGuess
             throw new \InvalidArgumentException("\"{$makeFactoryData->getObjectFullyQualifiedClassName()}\" is not a valid ORM class.");
         }
 
-        $this->guessDefaultValueForORMAssociativeFields($makeFactoryData, $metadata);
-        $this->guessDefaultValueForEmbedded($makeFactoryData, $metadata, $allFields);
+        $this->guessDefaultValueForORMAssociativeFields($makeFactoryData, $makeFactoryQuery, $metadata);
+        $this->guessDefaultValueForEmbedded($makeFactoryData, $makeFactoryQuery, $metadata);
     }
 
     public function supports(MakeFactoryData $makeFactoryData): bool
@@ -32,7 +32,7 @@ class ORMDefaultPropertiesGuesser extends AbstractDoctrineDefaultPropertiesGuess
         }
     }
 
-    private function guessDefaultValueForORMAssociativeFields(MakeFactoryData $makeFactoryData, ORMClassMetadata $metadata): void
+    private function guessDefaultValueForORMAssociativeFields(MakeFactoryData $makeFactoryData, MakeFactoryQuery $makeFactoryQuery, ORMClassMetadata $metadata): void
     {
         foreach ($metadata->associationMappings as $item) {
             // if joinColumns is not written entity is default nullable ($nullable = true;)
@@ -45,20 +45,20 @@ class ORMDefaultPropertiesGuesser extends AbstractDoctrineDefaultPropertiesGuess
                 continue;
             }
 
-            $this->addDefaultValueUsingFactory($makeFactoryData, $item['fieldName'], $item['targetEntity']);
+            $this->addDefaultValueUsingFactory($makeFactoryData, $makeFactoryQuery, $item['fieldName'], $item['targetEntity']);
         }
     }
 
-    private function guessDefaultValueForEmbedded(MakeFactoryData $makeFactoryData, ORMClassMetadata $metadata, bool $allFields): void
+    private function guessDefaultValueForEmbedded(MakeFactoryData $makeFactoryData, MakeFactoryQuery $makeFactoryQuery, ORMClassMetadata $metadata): void
     {
         foreach ($metadata->embeddedClasses as $fieldName => $item) {
             $isNullable = $makeFactoryData->getObject()->getProperty($fieldName)->getType()?->allowsNull() ?? true;
 
-            if (!$allFields && $isNullable) {
+            if (!$makeFactoryQuery->isAllFields() && $isNullable) {
                 continue;
             }
 
-            $this->addDefaultValueUsingFactory($makeFactoryData, $fieldName, $item['class']);
+            $this->addDefaultValueUsingFactory($makeFactoryData, $makeFactoryQuery, $fieldName, $item['class']);
         }
     }
 }

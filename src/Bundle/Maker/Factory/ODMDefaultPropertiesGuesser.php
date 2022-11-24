@@ -9,7 +9,7 @@ use Doctrine\ODM\MongoDB\Mapping\ClassMetadata as ODMClassMetadata;
  */
 class ODMDefaultPropertiesGuesser extends AbstractDoctrineDefaultPropertiesGuesser
 {
-    public function __invoke(MakeFactoryData $makeFactoryData, bool $allFields): void
+    public function __invoke(MakeFactoryData $makeFactoryData, MakeFactoryQuery $makeFactoryQuery): void
     {
         $metadata = $this->getClassMetadata($makeFactoryData);
 
@@ -30,11 +30,11 @@ class ODMDefaultPropertiesGuesser extends AbstractDoctrineDefaultPropertiesGuess
 
             $isNullable = $makeFactoryData->getObject()->getProperty($fieldName)->getType()?->allowsNull() ?? true;
 
-            if (!$allFields && ($isMultiple || $isNullable)) {
+            if (!$makeFactoryQuery->isAllFields() && ($isMultiple || $isNullable)) {
                 continue;
             }
 
-            $this->addDefaultValueUsingFactory($makeFactoryData, $fieldName, $item['targetDocument'], $isMultiple);
+            $this->addDefaultValueUsingFactory($makeFactoryData, $makeFactoryQuery, $fieldName, $item['targetDocument'], $isMultiple);
         }
     }
 
