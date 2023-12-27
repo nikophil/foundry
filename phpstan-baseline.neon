@@ -41,24 +41,24 @@ parameters:
 			path: src/FactoryCollection.php
 
 		-
-			message: "#^Method Zenstruck\\\\Foundry\\\\Persistence\\\\PersistentObjectFactory\\:\\:__callStatic\\(\\) should return array\\<int, TModel of object\\> but returns array\\<int, \\(TModel of object\\)\\|Zenstruck\\\\Foundry\\\\Persistence\\\\Proxy\\<TModel of object\\>\\>\\.$#"
+			message: "#^Method Zenstruck\\\\Foundry\\\\Object\\\\ObjectFactory\\:\\:__callStatic\\(\\) should return array\\<int, TModel of object\\> but returns array\\<int, \\(TModel of object\\)\\|Zenstruck\\\\Foundry\\\\Persistence\\\\Proxy\\<TModel of object\\>\\>\\.$#"
 			count: 1
-			path: src/Persistence/PersistentObjectFactory.php
+			path: src/Object/ObjectFactory.php
 
 		-
-			message: "#^Method Zenstruck\\\\Foundry\\\\Persistence\\\\PersistentObjectFactory\\:\\:createSequence\\(\\) should return array\\<int, TModel of object\\> but returns array\\<int, \\(TModel of object\\)\\|Zenstruck\\\\Foundry\\\\Persistence\\\\Proxy\\<TModel of object\\>\\>\\.$#"
+			message: "#^Method Zenstruck\\\\Foundry\\\\Object\\\\ObjectFactory\\:\\:createSequence\\(\\) should return array\\<int, TModel of object\\> but returns array\\<int, \\(TModel of object\\)\\|Zenstruck\\\\Foundry\\\\Persistence\\\\Proxy\\<TModel of object\\>\\>\\.$#"
 			count: 1
-			path: src/Persistence/PersistentObjectFactory.php
+			path: src/Object/ObjectFactory.php
 
 		-
 			message: "#^Should not use function \"debug_backtrace\", please change the code\\.$#"
 			count: 1
-			path: src/Persistence/PersistentObjectFactory.php
+			path: src/Object/ObjectFactory.php
 
 		-
 			message: "#^Unsafe usage of new static\\(\\)\\.$#"
 			count: 1
-			path: src/Persistence/PersistentObjectFactory.php
+			path: src/Object/ObjectFactory.php
 
 		-
 			message: "#^Should not use function \"debug_backtrace\", please change the code\\.$#"

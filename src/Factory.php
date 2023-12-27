@@ -223,6 +223,18 @@ class Factory
     }
 
     /**
+     * @internal
+     * @return static
+     */
+    public function withPersisting(): self
+    {
+        $cloned = clone $this;
+        $cloned->persist = true;
+
+        return $cloned;
+    }
+
+    /**
      * @param array|callable $attributes
      *
      * @deprecated use with() instead
