@@ -115,8 +115,7 @@ trait IsProxy
 
     private function _autoRefresh(): void
     {
-        // "??=" fixes in ProxyHelper where object gets created without any props initialized
-        if (!($this->_autoRefresh ??= true)) {
+        if (!$this->_autoRefresh) {
             return;
         }
 
