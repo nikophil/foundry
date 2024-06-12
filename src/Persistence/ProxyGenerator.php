@@ -39,7 +39,9 @@ final class ProxyGenerator
             return $object;
         }
 
-        return self::generateClassFor($object)::createLazyProxy(static fn() => $object); // @phpstan-ignore-line
+        $class = self::generateClassFor($object);
+
+        return $class::createLazyProxy(static fn() => $object, null, ["\0$class\0_autoRefresh" => true]); // @phpstan-ignore-line
     }
 
     /**
