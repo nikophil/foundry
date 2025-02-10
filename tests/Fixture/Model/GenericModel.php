@@ -11,6 +11,8 @@
 
 namespace Zenstruck\Foundry\Tests\Fixture\Model;
 
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ODM\MongoDB\Mapping\Annotations as MongoDB;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -37,9 +39,20 @@ abstract class GenericModel
     #[MongoDB\Field(type: 'date_immutable', nullable: true)]
     private ?\DateTimeImmutable $date = null;
 
+
+    #[ORM\OneToMany(targetEntity: GenericModelCollectionItem::class, mappedBy: 'genericModel', cascade: ['persist'])]
+    #[MongoDB\Field()]
+    private Collection $collection;
+
+    /** @var list<string> */
+    #[ORM\Column()]
+    #[MongoDB\Field()]
+    private array $otherCollection = [];
+
     public function __construct(string $prop1)
     {
         $this->prop1 = $prop1;
+        $this->collection = new ArrayCollection();
     }
 
     public function getProp1(): string
@@ -60,5 +73,26 @@ abstract class GenericModel
     public function setDate(?\DateTimeImmutable $date): void
     {
         $this->date = $date;
+    }
+
+    public function getCollection(): Collection
+    {
+        return $this->collection;
+    }
+
+    public function addElementToCollection(GenericModelCollectionItem $element): void
+    {
+        $element->setGenericModel($this);
+        $this->collection->add($element);
+    }
+
+    public function getOtherCollection(): array
+    {
+        return $this->otherCollection;
+    }
+
+    public function addElementToOtherCollection(string $element): void
+    {
+        $this->otherCollection[] = $element;
     }
 }
