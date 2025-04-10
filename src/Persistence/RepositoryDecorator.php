@@ -206,13 +206,13 @@ class RepositoryDecorator implements ObjectRepository, \IteratorAggregate, \Coun
 
         $all = \array_values($this->findBy($criteria));
 
-        \shuffle($all);
+//        \shuffle($all);
 
         if (\count($all) < $max) {
             throw new NotEnoughObjects(\sprintf('At least %d "%s" object(s) must have been persisted (%d persisted).', $max, $this->getClassName(), \count($all)));
         }
 
-        return \array_slice($all, 0, \random_int($min, $max));
+        return \array_slice($all, 0, \mt_rand($min, $max));
     }
 
     public function getIterator(): \Traversable
