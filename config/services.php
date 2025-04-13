@@ -41,8 +41,8 @@ return static function (ContainerConfigurator $container): void {
         ])
         ->public()
 
-        ->set('.zenstruck_foundry.validation_listener', ValidationListener::class)
-        ->args([service('validator')])
-        ->tag('kernel.event_listener', ['event' => AfterInstantiate::class, 'method' => '__invoke'])
+//        ->set('.zenstruck_foundry.validation_listener', ValidationListener::class)
+//        ->args([service('validator')])
+//        ->tag('kernel.event_listener', ['event' => AfterInstantiate::class, 'method' => '__invoke'])
     ;
 };
