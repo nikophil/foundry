@@ -335,18 +335,18 @@ final class ZenstruckFoundryBundle extends AbstractBundle implements CompilerPas
 
         // events
         $i = 0;
-        foreach ($container->findTaggedServiceIds('foundry.hook') as $id => $tags) {
-            foreach ($tags as $tag) {
-                $container
-                    ->setDefinition("foundry.hook.{$tag['event']}.{$i}", new Definition(class: HookListenerFilter::class))
-                    ->setArgument(0, [new Reference($id), $tag['method']])
-                    ->setArgument(1, $tag['class'])
-                    ->addTag('kernel.event_listener', ['event' => $tag['event']])
-                ;
-
-                ++$i;
-            }
-        }
+//        foreach ($container->findTaggedServiceIds('foundry.hook') as $id => $tags) {
+//            foreach ($tags as $tag) {
+//                $container
+//                    ->setDefinition("foundry.hook.{$tag['event']}.{$i}", new Definition(class: HookListenerFilter::class))
+//                    ->setArgument(0, [new Reference($id), $tag['method']])
+//                    ->setArgument(1, $tag['class'])
+//                    ->addTag('kernel.event_listener', ['event' => $tag['event']])
+//                ;
+//
+//                ++$i;
+//            }
+//        }
 
         // validation
         $container->getDefinition('.zenstruck_foundry.configuration')
