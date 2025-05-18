@@ -200,6 +200,7 @@ abstract class PersistentObjectFactory extends ObjectFactory
 
     /**
      * @return T
+     * @final
      */
     public function create(callable|array $attributes = []): object
     {

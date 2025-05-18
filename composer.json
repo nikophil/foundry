@@ -61,7 +61,7 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "Zenstruck\\Foundry\\Tests\\": ["tests/"],
+            "Zenstruck\\Foundry\\Tests\\": "tests/",
             "App\\": "tests/Fixture/Maker/tmp/src",
             "App\\Tests\\": "tests/Fixture/Maker/tmp/tests"
         },

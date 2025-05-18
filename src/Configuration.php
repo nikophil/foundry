@@ -23,7 +23,7 @@ use Zenstruck\Foundry\Persistence\PersistenceManager;
 /**
  * @author Kevin Bond <kevinbond@gmail.com>
  *
- * @internal
+ * @deprecated
  *
  * @phpstan-import-type InstantiatorCallable from ObjectFactory
  */
