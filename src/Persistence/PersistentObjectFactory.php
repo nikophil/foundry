@@ -363,6 +363,11 @@ abstract class PersistentObjectFactory extends ObjectFactory
             $this->tempAfterInstantiate[] = function(object $object) use ($collection, $inverseRelationshipMetadata, $field) {
                 $inverseField = $inverseRelationshipMetadata->inverseField();
 
+                // todo!
+                foreach ($this->reusedObjects as $reusedObject) {
+                    $collection = $collection->reuse($reusedObject); // on devrait pouvoir spread plutôt
+                }
+
                 $inverseObjects = $collection->withPersistMode(
                     $this->isPersisting() ? PersistMode::NO_PERSIST_BUT_SCHEDULE_FOR_INSERT : PersistMode::WITHOUT_PERSISTING
                 )

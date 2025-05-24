@@ -146,7 +146,14 @@ final class FactoryCollection implements \IteratorAggregate
      */
     public function create(array|callable $attributes = []): array
     {
-        if (Configuration::instance()->flushOnce && $this->isRootFactory && $this->factory instanceof PersistentObjectFactory && $this->factory->isPersisting()) {
+        if (
+            Configuration::instance()->flushOnce
+            && $this->isRootFactory
+            && $this->factory instanceof PersistentObjectFactory
+            // todo: à voir si on doit regarder les deux
+            && $this->persistMode === PersistMode::PERSIST
+            && $this->factory->isPersisting()
+        ) {
             return flush_after(
                 fn() => \array_map(static fn(Factory $f) => $f->create($attributes), $this->all())
             );
@@ -208,6 +215,22 @@ final class FactoryCollection implements \IteratorAggregate
                 static fn(Factory $f, $value) => $f->with([$field => $value]),
                 $factories,
                 $values
+            )
+        );
+    }
+
+    /**
+     * @internal
+     */
+    final public function reuse(object $object): static
+    {
+        $factories = $this->all();
+
+        return new self(
+            $this->factory,
+            static fn() => \array_map(
+                static fn(Factory $f) => $f instanceof ObjectFactory ? $f->reuse($object) : $f,
+                $factories,
             )
         );
     }

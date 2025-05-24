@@ -13,6 +13,8 @@ namespace Zenstruck\Foundry;
 
 use Zenstruck\Foundry\Object\Instantiator;
 
+use function Zenstruck\Foundry\Persistence\unproxy;
+
 /**
  * @author Kevin Bond <kevinbond@gmail.com>
  *
@@ -121,7 +123,7 @@ abstract class ObjectFactory extends Factory
         }
 
         $clone = clone $this;
-        $clone->reusedObjects[$object::class] = $object;
+        $clone->reusedObjects[$object::class] = unproxy($object, withAutoRefresh: false);
 
         return $clone;
     }
@@ -139,6 +141,16 @@ abstract class ObjectFactory extends Factory
         }
 
         return parent::normalizeParameter($field, $value);
+    }
+
+    // todo: est-ce que c'est vraiment utile?
+    protected function normalizeCollection(string $field, FactoryCollection $collection): array
+    {
+        foreach ($this->reusedObjects as $reusedObject) {
+            $collection = $collection->reuse($reusedObject);
+        }
+
+        return parent::normalizeCollection($field, $collection);
     }
 
     /**
