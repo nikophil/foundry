@@ -74,12 +74,12 @@ if (interface_exists(Runner\Extension\Extension::class)) {
 } else {
     final class FoundryExtension
     {
-        public static function shouldBeEnabled(): bool
+        public static function shouldBeEnabled(): bool // @phpstan-ignore return.tooWideBool
         {
             return false;
         }
 
-        public static function isEnabled(): bool
+        public static function isEnabled(): bool // @phpstan-ignore return.tooWideBool
         {
             return false;
         }
