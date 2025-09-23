@@ -66,7 +66,7 @@ final class PersistentObjectFromDataProviderRegistry
         if (count($this->objectsBuffer) === 0) {
             return;
         }
-        
+
         $this->shouldReturnObjectFromBuffer = true;
 
         $testCaseContext = $this->testCaseContext($className, $methodName);

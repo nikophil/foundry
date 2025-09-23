@@ -20,6 +20,8 @@ use Zenstruck\Foundry\Configuration;
 use Zenstruck\Foundry\PHPUnit\DataProvider\BootFoundryOnDataProviderMethodCalled;
 use Zenstruck\Foundry\PHPUnit\DataProvider\ShutdownFoundryOnDataProviderMethodFinished;
 use Zenstruck\Foundry\PHPUnit\DataProvider\TriggerDataProviderPersistenceOnTestPrepared;
+use Zenstruck\Foundry\PHPUnit\ResetDatabase\ResetDatabaseBeforeEachTest;
+use Zenstruck\Foundry\PHPUnit\ResetDatabase\ResetDatabaseBeforeFirstTest;
 
 /**
  * @internal
@@ -40,20 +42,27 @@ if (\interface_exists(Runner\Extension\Extension::class)) {
                 Configuration::shutdown();
             }
 
+            if (ConstraintRequirement::from('>=11.4')->isSatisfiedBy(Runner\Version::id())) {
+                // those deal with data provider events which can be useful only if PHPUnit >=11.4 is used
+                $subscribers = [
+                    new BootFoundryOnDataProviderMethodCalled(),
+                    new ShutdownFoundryOnDataProviderMethodFinished(),
+
+                    // must be added BEFORE ResetDatabaseBeforeEachTest
+                    new TriggerDataProviderPersistenceOnTestPrepared(),
+                ];
+            }
+
             $subscribers = [
+                ...($subscribers ?? []),
                 new BuildStoryOnTestPrepared(),
                 new EnableInMemoryBeforeTest(),
                 new DisplayFakerSeedOnTestSuiteFinished(),
                 new BootFoundryOnPreparationStarted(),
                 new ShutdownFoundryOnTestFinished(),
+                new ResetDatabaseBeforeFirstTest(),
+                new ResetDatabaseBeforeEachTest(),
             ];
-
-            if (ConstraintRequirement::from('>=11.4')->isSatisfiedBy(Runner\Version::id())) {
-                // those deal with data provider events which can be useful only if PHPUnit >=11.4 is used
-                $subscribers[] = new BootFoundryOnDataProviderMethodCalled();
-                $subscribers[] = new ShutdownFoundryOnDataProviderMethodFinished();
-                $subscribers[] = new TriggerDataProviderPersistenceOnTestPrepared();
-            }
 
             $facade->registerSubscribers(...$subscribers);
 
