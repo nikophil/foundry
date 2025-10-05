@@ -5,6 +5,7 @@ namespace Symfony\Component\DependencyInjection\Loader\Configurator;
 use Symfony\Component\Console\Event\ConsoleTerminateEvent;
 use Symfony\Component\HttpKernel\Event\TerminateEvent;
 use Symfony\Component\Messenger\Event\WorkerMessageHandledEvent;
+use Zenstruck\Foundry\Command\LintDeprecationsCommand;
 use Zenstruck\Foundry\Command\LoadFixturesCommand;
 use Zenstruck\Foundry\Persistence\PersistenceManager;
 use Zenstruck\Foundry\Persistence\Proxy\PersistedObjectsTracker;
@@ -29,6 +30,11 @@ return static function (ContainerConfigurator $container): void {
             ->tag('console.command', [
                 'command' => 'foundry:load-fixtures|foundry:load-stories|foundry:load-story',
                 'description' => 'Load stories which are marked with #[AsFixture] attribute.',
+            ])
+
+        ->set('.zenstruck_foundry.command.lint_deprecations', LintDeprecationsCommand::class)
+            ->tag('console.command', [
+                'command' => 'debug:lint-deprecations',
             ])
     ;
 
