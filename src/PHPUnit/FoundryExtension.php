@@ -25,8 +25,7 @@ use Zenstruck\Foundry\PHPUnit\DataProvider\TriggerDataProviderPersistenceOnTestP
  * @internal
  * @author Nicolas PHILIPPE <nikophil@gmail.com>
  */
-
-if (interface_exists(Runner\Extension\Extension::class)) {
+if (\interface_exists(Runner\Extension\Extension::class)) {
     final class FoundryExtension implements Runner\Extension\Extension
     {
         private static bool $enabled = false;

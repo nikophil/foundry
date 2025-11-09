@@ -48,6 +48,6 @@ use Zenstruck\Foundry\Utils\Rector\FoundrySetList;
 
 return RectorConfig::configure()
     ->withPaths(['tests'])
-    ->withSets([FoundrySetList::FOUNDRY_2_8])
+    ->withSets([FoundrySetList::FOUNDRY_2_9])
 ;
 ```

@@ -21,7 +21,6 @@ use PHPUnit\Framework\Attributes\RequiresPhpunitExtension;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Zenstruck\Foundry\PHPUnit\FoundryExtension;
-use Zenstruck\Foundry\Test\Factories;
 use Zenstruck\Foundry\Test\ResetDatabase;
 use Zenstruck\Foundry\Tests\Fixture\Factories\Entity\GenericEntityFactory;
 use Zenstruck\Foundry\Tests\Fixture\Model\GenericModel;
@@ -36,7 +35,6 @@ use Zenstruck\Foundry\Tests\Fixture\Model\GenericModel;
 #[RequiresEnvironmentVariable('USE_PHP_84_LAZY_OBJECTS', '1')]
 final class DataProviderWithPersistentFactoryAndPHP84InKernelTest extends KernelTestCase
 {
-    use Factories;
     use ResetDatabase;
 
     #[Test]

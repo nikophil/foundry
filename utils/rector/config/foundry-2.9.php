@@ -15,7 +15,7 @@ use Rector\Config\RectorConfig;
 use Rector\Removing\Rector\Class_\RemoveTraitUseRector;
 use Zenstruck\Foundry\Test\Factories;
 
-return static function (RectorConfig $rectorConfig): void {
+return static function(RectorConfig $rectorConfig): void {
     $rectorConfig->ruleWithConfiguration(
         RemoveTraitUseRector::class,
         [

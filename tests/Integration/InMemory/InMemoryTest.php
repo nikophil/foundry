@@ -20,7 +20,6 @@ use PHPUnit\Framework\Attributes\Test;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Zenstruck\Foundry\InMemory\AsInMemoryTest;
 use Zenstruck\Foundry\PHPUnit\FoundryExtension;
-use Zenstruck\Foundry\Test\Factories;
 use Zenstruck\Foundry\Test\ResetDatabase;
 use Zenstruck\Foundry\Tests\Fixture\Entity\Address;
 use Zenstruck\Foundry\Tests\Fixture\Entity\Category;
@@ -41,7 +40,6 @@ use Zenstruck\Foundry\Tests\Integration\RequiresORM;
 #[AsInMemoryTest]
 final class InMemoryTest extends KernelTestCase
 {
-    use Factories;
     use RequiresORM;
     use ResetDatabase;
 

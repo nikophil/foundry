@@ -33,7 +33,6 @@ final class BootFoundryOnPreparationStarted implements Event\Test\PreparationSta
             return;
         }
         /** @var Event\Code\TestMethod $test */
-
         $this->bootFoundry($test->className());
     }
 
