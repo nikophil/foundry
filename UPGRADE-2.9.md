@@ -1,6 +1,6 @@
-# Migration guide from Foundry 2.7 to 2.8
+# Migration guide from Foundry 2.8 to 2.9
 
-The main feature of Foundry 2.8 is the deprecation of the `Factories` trait, in favor of the [PHPUnit extension](https://symfony.com/bundles/ZenstruckFoundryBundle/current/index.html#phpunit-extension)
+The main feature of Foundry 2.9 is the deprecation of the `Factories` trait, in favor of the [PHPUnit extension](https://symfony.com/bundles/ZenstruckFoundryBundle/current/index.html#phpunit-extension)
 shipped by Foundry. It was necessary to remember to add the trait in every test class. And in some cases, Foundry could
 still work even if the trait wasn’t added to the test, which could lead to subtle bugs. Now, Foundry is globally enabled
 once for all.

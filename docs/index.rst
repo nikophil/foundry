@@ -1698,9 +1698,9 @@ Add Foundry's `PHPUnit Extension`_ in your `phpunit.xml` file:
             </extensions>
         </phpunit>
 
-.. versionadded::  2.8
+.. versionadded::  2.9
 
-    The ability to globally enable Foundry with PHPUnit extension was introduced in Foundry 2.8 and requires at least
+    The ability to globally enable Foundry with PHPUnit extension was introduced in Foundry 2.9 and requires at least
     PHPUnit 10.
 
 .. note::
