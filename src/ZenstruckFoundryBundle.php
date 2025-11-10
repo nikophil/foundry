@@ -33,6 +33,7 @@ use Zenstruck\Foundry\ORM\ResetDatabase\MigrateDatabaseResetter;
 use Zenstruck\Foundry\ORM\ResetDatabase\OrmResetter;
 use Zenstruck\Foundry\ORM\ResetDatabase\ResetDatabaseMode;
 use Zenstruck\Foundry\ORM\ResetDatabase\SchemaDatabaseResetter;
+use Zenstruck\Foundry\PHPUnit\FoundryExtension;
 
 /**
  * @author Kevin Bond <kevinbond@gmail.com>
@@ -41,7 +42,7 @@ final class ZenstruckFoundryBundle extends AbstractBundle implements CompilerPas
 {
     public function boot(): void
     {
-        if ($this->container) {
+        if ($this->container && (!Configuration::isBooted() || !FoundryExtension::isEnabled())) {
             Configuration::boot($this->container->get('.zenstruck_foundry.configuration')); // @phpstan-ignore argument.type
         }
     }

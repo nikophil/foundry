@@ -13,6 +13,7 @@ use Zenstruck\Foundry\Test\ResetDatabase;
 use Zenstruck\Foundry\Tests\Fixture\Factories\Entity\GenericEntityFactory;
 use Zenstruck\Foundry\Tests\Fixture\Factories\Object1Factory;
 use Zenstruck\Foundry\Tests\Fixture\Model\GenericModel;
+
 use function Zenstruck\Foundry\Persistence\assert_persisted;
 
 abstract class DataProviderWithPersistentFactoryTestCase extends KernelTestCase
