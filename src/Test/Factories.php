@@ -17,7 +17,7 @@ use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Zenstruck\Foundry\Configuration;
 use Zenstruck\Foundry\PHPUnit\FoundryExtension;
 
-use function Zenstruck\Foundry\Persistence\initialize_proxy_object;
+use function Zenstruck\Foundry\Persistence\initialize_lazy_object;
 
 /**
  * @author Kevin Bond <kevinbond@gmail.com>
@@ -109,6 +109,6 @@ trait Factories
             ? $this->getProvidedData() // @phpstan-ignore method.notFound
             : $this->providedData(); // @phpstan-ignore method.internal
 
-        initialize_proxy_object($providedData);
+        initialize_lazy_object($providedData);
     }
 }

@@ -125,6 +125,10 @@ final class FactoryCollection implements \IteratorAggregate
             throw new \InvalidArgumentException('Min must be less than max.');
         }
 
+        if ($factory instanceof PersistentObjectFactory && $factory->isPersisting() && Configuration::instance()->inADataProvider()) {
+            throw new \InvalidArgumentException('Using randomized "range" factory in data provider is not supported.');
+        }
+
         return new self($factory, static fn() => \array_fill(0, \mt_rand($min, $max), []));
     }
 

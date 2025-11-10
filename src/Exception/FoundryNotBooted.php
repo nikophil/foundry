@@ -20,7 +20,7 @@ final class FoundryNotBooted extends \LogicException
 {
     public function __construct()
     {
-        $message = FoundryExtension::isEnabled()
+        $message = FoundryExtension::shouldBeEnabled()
             ? 'Foundry is not yet booted. Ensure ZenstruckFoundryBundle is enabled. If in a test, ensure Foundry\'s PHPUnit extension is enabled.'
             : 'Foundry is not yet booted. Ensure ZenstruckFoundryBundle is enabled. If in a test, ensure your TestCase has the Factories trait.';
 

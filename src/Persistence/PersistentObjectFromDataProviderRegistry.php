@@ -11,11 +11,13 @@
 
 namespace Zenstruck\Foundry\Persistence;
 
+use PHPUnit\Event\Code\ClassMethod;
+
 /**
- * If a persistent object has been created in a data provider, we need to initialize the proxy object,
+ * If a persistent object has been created in a data provider, we need to initialize the lazy object,
  * which will trigger the object to be persisted.
  *
- * Otherwise, such test would not pass:
+ * Otherwise, such a test would not pass:
  * ```php
  * #[DataProvider('provide')]
  * public function testSomething(MyEntity $entity): void
@@ -31,9 +33,12 @@ namespace Zenstruck\Foundry\Persistence;
  *
  * Sadly, this cannot be done directly a subscriber, since PHPUnit does not give access to the actual tests instances.
  *
- * This class is highly hacky!
- * We collect all the "datasets" and we trigger the persistence for each one before the test is executed.
- * This means that de data providers are called twice.
+ * ⚠️ This class is highly hacky!
+ *
+ * If we detect that a persisting object was created in a data provider, we collect the "datasets" of the test,
+ * and we trigger the persistence of these objects before the test is executed.
+ *
+ * This means that the data providers using Foundry are called twice.
  * To prevent the persisted object from being different from the one returned by the data provider, we use a "buffer" so
  * that we can return the same object for each data provider call.
  *
@@ -49,30 +54,39 @@ final class PersistentObjectFromDataProviderRegistry
     /** @var list<object> */
     private array $objectsBuffer = [];
 
-    private bool $shouldReturnExistingObject = false;
+    private bool $shouldReturnObjectFromBuffer = false;
 
     public static function instance(): self
     {
         return self::$instance ?? self::$instance = new self();
     }
 
-    /**
-     * @param callable():iterable<array-key, mixed> $dataProviderResult
-     */
-    public function addDataset(string $className, string $methodName, callable $dataProviderResult): void
+    public function storeDatasetIfFoundryWasUsedInDataProvider(string $className, string $methodName, ClassMethod ...$calledMethods): void
     {
-        $this->shouldReturnExistingObject = false;
-
-        $dataProviderResult = $dataProviderResult();
-
-        if (!\is_array($dataProviderResult)) {
-            $dataProviderResult = \iterator_to_array($dataProviderResult);
+        if (count($this->objectsBuffer) === 0) {
+            return;
         }
+        
+        $this->shouldReturnObjectFromBuffer = true;
 
         $testCaseContext = $this->testCaseContext($className, $methodName);
-        $this->datasets[$testCaseContext] = $dataProviderResult;
+        $this->datasets[$testCaseContext] = [];
 
-        $this->shouldReturnExistingObject = true;
+        foreach ($calledMethods as $calledMethod) {
+            $dataProviderResult = "{$calledMethod->className()}::{$calledMethod->methodName()}"(); // @phpstan-ignore callable.nonCallable
+
+            if (!\is_array($dataProviderResult)) {
+                $dataProviderResult = \iterator_to_array($dataProviderResult);
+            }
+
+            $this->datasets[$testCaseContext] = [...$this->datasets[$testCaseContext], ...$dataProviderResult];
+        }
+
+        $this->shouldReturnObjectFromBuffer = false;
+
+        if (count($this->objectsBuffer) !== 0) { // @phpstan-ignore notIdentical.alwaysTrue
+            throw new \InvalidArgumentException("No object found. Hint: make sure you're not creating a randomized number of objects with Foundry in a data provider, as they are not supported.");
+        }
     }
 
     /**
@@ -84,8 +98,16 @@ final class PersistentObjectFromDataProviderRegistry
      */
     public function deferObjectCreation(PersistentObjectFactory $factory): object
     {
-        if (!$this->shouldReturnExistingObject) {
+        if (!$factory->isPersisting()) {
+            return $factory->create();
+        }
+
+        if (!$this->shouldReturnObjectFromBuffer) {
             return $this->objectsBuffer[] = ProxyGenerator::wrapFactory($factory);
+        }
+
+        if (count($this->objectsBuffer) === 0) {
+            throw new \InvalidArgumentException("No object found. Hint: make sure you're not creating a randomized number of objects with Foundry in a data provider, as they are not supported.");
         }
 
         return \array_shift($this->objectsBuffer); // @phpstan-ignore return.type
@@ -99,7 +121,7 @@ final class PersistentObjectFromDataProviderRegistry
             return;
         }
 
-        initialize_proxy_object($this->datasets[$testCaseContext][$dataSetName]);
+        initialize_lazy_object($this->datasets[$testCaseContext][$dataSetName]);
 
         unset($this->datasets[$testCaseContext][$dataSetName]);
     }

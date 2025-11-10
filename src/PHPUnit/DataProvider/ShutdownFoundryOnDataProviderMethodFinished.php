@@ -15,6 +15,7 @@ namespace Zenstruck\Foundry\PHPUnit\DataProvider;
 
 use PHPUnit\Event;
 use Zenstruck\Foundry\Configuration;
+use Zenstruck\Foundry\Persistence\PersistentObjectFromDataProviderRegistry;
 use Zenstruck\Foundry\PHPUnit\KernelTestCaseHelper;
 
 /**
@@ -25,6 +26,12 @@ final class ShutdownFoundryOnDataProviderMethodFinished implements Event\Test\Da
 {
     public function notify(Event\Test\DataProviderMethodFinished $event): void
     {
+        PersistentObjectFromDataProviderRegistry::instance()->storeDatasetIfFoundryWasUsedInDataProvider(
+            $event->testMethod()->className(),
+            $event->testMethod()->methodName(),
+            ...$event->calledMethods(),
+        );
+
         KernelTestCaseHelper::tearDownClass($event->testMethod()->className());
 
         Configuration::shutdown();

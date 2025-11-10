@@ -27,17 +27,12 @@ use Zenstruck\Foundry\Tests\Integration\RequiresMongo;
 #[RequiresPhpunit('>=11.4')]
 #[RequiresPhpunitExtension(FoundryExtension::class)]
 #[IgnoreDeprecations]
-final class GenericDocumentFactoryTest extends DataProviderWithPersistentFactoryInKernelTestCase
+final class DataProviderWithProxyPersistentDocumentFactoryTest extends DataProviderWithPersistentFactoryTestCase
 {
     use RequiresMongo;
 
-    protected static function proxyFactory(): GenericProxyDocumentFactory
+    protected static function factory(): GenericProxyDocumentFactory
     {
         return GenericProxyDocumentFactory::new();
-    }
-
-    protected static function factory(): PersistentObjectFactory
-    {
-        return GenericDocumentFactory::new();
     }
 }

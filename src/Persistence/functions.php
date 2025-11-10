@@ -230,7 +230,7 @@ function assert_not_persisted(object $object, string $message = '{entity} is per
 /**
  * @internal
  */
-function initialize_proxy_object(mixed $what): void
+function initialize_lazy_object(mixed $what): void
 {
     if (
         \PHP_VERSION_ID >= 80400
@@ -244,7 +244,7 @@ function initialize_proxy_object(mixed $what): void
 
     match (true) {
         $what instanceof Proxy => $what->_initializeLazyObject(),
-        \is_array($what) => \array_map(initialize_proxy_object(...), $what),
+        \is_array($what) => \array_map(initialize_lazy_object(...), $what),
         default => true, // do nothing
     };
 }
