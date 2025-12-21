@@ -19,6 +19,8 @@ final class Object1
     private string $prop1;
     private string $prop2;
     private ?string $prop3 = null;
+    /** @var list<string> */
+    private array $values = [];
 
     public function __construct(string $prop1, string $prop2 = 'default')
     {
@@ -59,5 +61,21 @@ final class Object1
     public function setProp3(string $prop3): void
     {
         $this->prop3 = $prop3.'-setter';
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function getValues(): array
+    {
+        return $this->values;
+    }
+
+    /**
+     * @param list<string> $values
+     */
+    public function setValues(array $values): void
+    {
+        $this->values = $values;
     }
 }

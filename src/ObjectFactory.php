@@ -14,6 +14,8 @@ namespace Zenstruck\Foundry;
 use Zenstruck\Foundry\Object\Event\AfterInstantiate;
 use Zenstruck\Foundry\Object\Event\BeforeInstantiate;
 use Zenstruck\Foundry\Object\Instantiator;
+use Zenstruck\Foundry\ParameterNormalizer\Parameter;
+use Zenstruck\Foundry\ParameterNormalizer\ParametersCollection;
 use Zenstruck\Foundry\Persistence\ProxyGenerator;
 
 /**
@@ -61,11 +63,16 @@ abstract class ObjectFactory extends Factory
 
         $parameters = $this->normalizeParameters($parameters);
         $instantiator = $this->instantiator ?? Configuration::instance()->instantiator;
+
         /** @var T $object */
-        $object = $instantiator($parameters, static::class());
+        $object = $instantiator($parameters->getParameters(), static::class());
+
+        foreach ($parameters->getAfterInstantiateCallbacks() as $hook) {
+            $hook($object);
+        }
 
         foreach (\array_merge(...$this->afterInstantiate) as $hook) {
-            $hook($object, $parameters, $this);
+            $hook($object, $parameters->getParameters(), $this);
         }
 
         return $object;
@@ -148,12 +155,12 @@ abstract class ObjectFactory extends Factory
         return $clone;
     }
 
-    protected function normalizeParameter(string $field, mixed $value): mixed
+    protected function normalizeParameter(string $field, mixed $value): Parameter
     {
         if ($value instanceof self) {
             // propagate "reused" objects
             foreach ($this->reusedObjects as $item) {
-                // "reused" item in the target factory have priority, if they are of the same type
+                // "reused" item in the target factory have priority if they are of the same type
                 if (!isset($value->reusedObjects[$item::class])) {
                     $value = $value->reuse($item);
                 }
@@ -194,7 +201,7 @@ abstract class ObjectFactory extends Factory
                 continue;
             }
 
-            // test if reused object is a subclass of the property's type
+            // test if the reused object is a subclass of the property's type
             foreach ($this->reusedObjects as $reusedObject) {
                 if (\is_a($reusedObject, $type->getName())) {
                     $attributes[$property->getName()] = $reusedObject;

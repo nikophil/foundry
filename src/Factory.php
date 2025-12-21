@@ -13,6 +13,8 @@ namespace Zenstruck\Foundry;
 
 use Faker;
 use Zenstruck\Foundry\Exception\CannotCreateFactory;
+use Zenstruck\Foundry\ParameterNormalizer\Parameter;
+use Zenstruck\Foundry\ParameterNormalizer\ParametersCollection;
 
 /**
  * @author Kevin Bond <kevinbond@gmail.com>
@@ -220,21 +222,22 @@ abstract class Factory
      * @internal
      *
      * @phpstan-param Parameters $parameters
-     *
-     * @phpstan-return Parameters
      */
-    protected function normalizeParameters(array $parameters): array
+    protected function normalizeParameters(array $parameters): ParametersCollection
     {
-        return \array_combine(
-            \array_keys($parameters),
-            \array_map($this->normalizeParameter(...), \array_keys($parameters), $parameters)
-        );
+        $parametersDTO = new ParametersCollection();
+
+        foreach ($parameters as $key => $value) {
+            $parametersDTO->addParameter($key, $this->normalizeParameter($key, $value));
+        }
+
+        return $parametersDTO;
     }
 
     /**
      * @internal
      */
-    protected function normalizeParameter(string $field, mixed $value): mixed
+    protected function normalizeParameter(string $field, mixed $value): Parameter
     {
         if ($value instanceof LazyValue) {
             $value = $value();
@@ -253,30 +256,33 @@ abstract class Factory
         }
 
         if (\is_array($value)) {
-            return $this->normalizeParameters($value);
+            return new Parameter(
+                \array_combine(
+                    \array_keys($value),
+                    \array_map(fn(mixed $v) => $this->normalizeParameter($field, $v)->value, $value)
+                )
+            );
         }
 
-        return \is_object($value) ? $this->normalizeObject($field, $value) : $value;
+        return \is_object($value) ? $this->normalizeObject($field, $value) : new Parameter($value);
     }
 
     /**
      * @internal
      *
      * @param FactoryCollection<mixed, Factory<mixed>> $collection
-     *
-     * @return self<mixed>[]
      */
-    protected function normalizeCollection(string $field, FactoryCollection $collection): array
+    protected function normalizeCollection(string $field, FactoryCollection $collection): Parameter
     {
-        return $this->normalizeParameters($collection->all());
+        return new Parameter(\array_map(fn(Factory $f) => $this->normalizeParameter($field, $f)->value, $collection->all()));
     }
 
     /**
      * @internal
      */
-    protected function normalizeObject(string $field, object $object): object
+    protected function normalizeObject(string $field, object $object): Parameter
     {
-        return $object;
+        return new Parameter($object);
     }
 
     /**

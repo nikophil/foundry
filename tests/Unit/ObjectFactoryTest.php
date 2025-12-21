@@ -525,4 +525,23 @@ final class ObjectFactoryTest extends TestCase
     {
         $this->markTestIncomplete();
     }
+
+    /**
+     * @test
+     * @dataProvider arrayParametersProvider
+     */
+    #[Test]
+    #[DataProvider('arrayParametersProvider')]
+    public function can_use_arrays_as_parameter(array $values): void
+    {
+        $object = Object1Factory::createOne(['values' => $values]);
+
+        self::assertSame($values, $object->getValues());
+    }
+
+    public static function arrayParametersProvider(): iterable
+    {
+        yield [['value1', 'value2']];
+        yield [['key1' => 'value1', 'key2' => 'value2']];
+    }
 }
