@@ -249,14 +249,11 @@ abstract class Factory
         }
 
         if ($value instanceof FactoryCollection) {
-            $value = $this->normalizeCollection($field, $value);
+            return $this->normalizeCollection($field, $value);
         }
 
         if (\is_array($value)) {
-            return \array_combine(
-                \array_keys($value),
-                \array_map($this->normalizeParameter(...), \array_fill(0, \count($value), $field), $value)
-            );
+            return $this->normalizeParameters($value);
         }
 
         return \is_object($value) ? $this->normalizeObject($field, $value) : $value;
@@ -271,7 +268,7 @@ abstract class Factory
      */
     protected function normalizeCollection(string $field, FactoryCollection $collection): array
     {
-        return \array_map(fn(Factory $f) => $this->normalizeParameter($field, $f), $collection->all());
+        return $this->normalizeParameters($collection->all());
     }
 
     /**
