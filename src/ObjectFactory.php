@@ -31,7 +31,7 @@ abstract class ObjectFactory extends Factory
     private array $beforeInstantiate = [];
 
     /** @phpstan-var array<int, list<callable(T, Parameters, static):void>> */
-    private array $afterInstantiate = [];
+    public array $afterInstantiate = [];
 
     /** @phpstan-var InstantiatorCallable|null */
     private $instantiator;
@@ -64,8 +64,14 @@ abstract class ObjectFactory extends Factory
         /** @var T $object */
         $object = $instantiator($parameters, static::class());
 
-        foreach (\array_merge(...$this->afterInstantiate) as $hook) {
-            $hook($object, $parameters, $this);
+        if (Configuration::isBooted() && Configuration::instance()->hasEventDispatcher()) {
+            Configuration::instance()->eventDispatcher()->dispatch(
+                new AfterInstantiate($object, $parameters, $this)
+            );
+        } else {
+            foreach (\array_merge(...$this->afterInstantiate) as $hook) {
+                $hook($object, $parameters, $this);
+            }
         }
 
         return $object;
@@ -225,13 +231,14 @@ abstract class ObjectFactory extends Factory
                 return $hook->parameters;
             }
         )
-            ->afterInstantiate(
-                static function(object $object, array $parameters, self $usedFactory): void {
-                    Configuration::instance()->eventDispatcher()->dispatch(
-                        new AfterInstantiate($object, $parameters, $usedFactory)
-                    );
-                }
-            );
+//            ->afterInstantiate(
+//                static function(object $object, array $parameters, self $usedFactory): void {
+//                    Configuration::instance()->eventDispatcher()->dispatch(
+//                        new AfterInstantiate($object, $parameters, $usedFactory)
+//                    );
+//                }
+//            )
+            ;
     }
 
     /**

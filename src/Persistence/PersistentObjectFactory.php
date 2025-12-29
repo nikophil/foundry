@@ -47,12 +47,12 @@ abstract class PersistentObjectFactory extends ObjectFactory
     private PersistMode $persist = PersistMode::PERSIST;
 
     /** @phpstan-var array<int, list<callable(T, Parameters, static):void|callable(T, Parameters, static):bool>> */
-    private array $afterPersist = [];
+    public array $afterPersist = [];
 
     /** @var list<callable(T):void> */
     private array $inverseRelationshipCallbacks = [];
 
-    private bool $isRootFactory = true;
+    public bool $isRootFactory = true;
 
     private ?bool $autorefreshEnabled = null;
 
@@ -246,25 +246,7 @@ abstract class PersistentObjectFactory extends ObjectFactory
             return ProxyGenerator::wrapFactoryNativeProxy($this, $attributes);
         }
 
-        $object = parent::create($attributes);
-
-        $this->throwIfCannotCreateObject();
-
-        if (PersistMode::PERSIST !== $this->persistMode()) {
-            return $object;
-        }
-
-        if ($configuration->flushOnce && !$this->isRootFactory) {
-            return $object;
-        }
-
-        if (!$configuration->isPersistenceAvailable()) {
-            throw new \LogicException('Persistence cannot be used in unit tests.');
-        }
-
-        $configuration->persistence()->save($object);
-
-        return $object;
+        return parent::create($attributes);
     }
 
     final public function andPersist(): static
@@ -543,7 +525,25 @@ abstract class PersistentObjectFactory extends ObjectFactory
                         };
                     }
 
-                    Configuration::instance()->persistence()->scheduleForInsert($object, $afterPersistCallbacks);
+                    $configuration = Configuration::instance();
+
+                    $configuration->persistence()->scheduleForInsert($object, $afterPersistCallbacks);
+
+                    $factoryUsed->throwIfCannotCreateObject();
+
+                    if (PersistMode::PERSIST !== $factoryUsed->persistMode()) {
+                        return;
+                    }
+
+                    if ($configuration->flushOnce && !$factoryUsed->isRootFactory) {
+                        return;
+                    }
+
+                    if (!$configuration->isPersistenceAvailable()) {
+                        throw new \LogicException('Persistence cannot be used in unit tests.');
+                    }
+
+                    $configuration->persistence()->save($object);
                 },
                 self::PRIORITY_SCHEDULE_FOR_INSERT
             )

@@ -15,7 +15,9 @@ use Symfony\Component\Console\Event\ConsoleTerminateEvent;
 use Symfony\Component\HttpKernel\Event\TerminateEvent;
 use Symfony\Component\Messenger\Event\WorkerMessageHandledEvent;
 use Zenstruck\Foundry\Command\LoadFixturesCommand;
+use Zenstruck\Foundry\Object\Event\AfterInstantiate;
 use Zenstruck\Foundry\Persistence\Event\AfterPersist;
+use Zenstruck\Foundry\Persistence\PersistAfterInstantiate;
 use Zenstruck\Foundry\Persistence\PersistedObjectsTracker;
 use Zenstruck\Foundry\Persistence\PersistenceManager;
 use Zenstruck\Foundry\Persistence\ResetDatabase\ResetDatabaseManager;
@@ -40,6 +42,9 @@ return static function(ContainerConfigurator $container): void {
                 'command' => 'foundry:load-fixtures|foundry:load-stories|foundry:load-story',
                 'description' => 'Load stories which are marked with #[AsFixture] attribute.',
             ])
+
+        ->set('.zenstruck_foundry.listener.persist_after_instantiate', PersistAfterInstantiate::class)
+            ->tag('kernel.event_listener', ['event' => AfterInstantiate::class])
     ;
 
     if (\PHP_VERSION_ID >= 80400) {
