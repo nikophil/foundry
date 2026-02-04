@@ -443,7 +443,10 @@ class PersistenceManager
         return $this->resetDatabaseManager;
     }
 
-    public function getIdentifierValues(object $object): mixed
+    /**
+     * @return array<string, mixed>
+     */
+    public function getIdentifierValues(object $object): array
     {
         return $this->strategyFor($object::class)->getIdentifierValues($object);
     }
