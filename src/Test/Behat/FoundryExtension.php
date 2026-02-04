@@ -74,6 +74,7 @@ final class FoundryExtension implements Extension
             ->addTag(CallExtension::CALL_FILTER_TAG);
 
         $databaseResetMode = DatabaseResetMode::from($config['database_reset_mode']);
+        dump($databaseResetMode);
 
         if ($databaseResetMode === DatabaseResetMode::DISABLED) {
             return;

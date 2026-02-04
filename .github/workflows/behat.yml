@@ -59,7 +59,9 @@ jobs:
           SYMFONY_REQUIRE: ${{ matrix.symfony }}
 
       - name: "Main test suite: reset DB at scenario level, with Dama support"
-        run: vendor/bin/behat
+        run: |
+          vendor/bin/behat --debug
+          vendor/bin/behat --colors -vvv
 
       - name: "Main test suite: reset DB at scenario level, without Dama support"
         run: vendor/bin/behat --profile=main-no-dama
