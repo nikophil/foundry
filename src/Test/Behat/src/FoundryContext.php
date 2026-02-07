@@ -72,21 +72,21 @@ class FoundryContext extends AbstractFoundryContext implements Context
      * optional "exist and", and optional trailing "properties".
      */
     #[\Override]
-    #[Then('/^(?:the |an? )?(?!\d)(?|"(?P<factoryShortName>[^"]+)"|(?P<factoryShortName>\S+)) (?:(?:called |named ))?(?|"(?P<objectName>[^"]+)"|(?P<objectName>\S+)) should (?:exist and )?have(?: properties)?$/')]
+    #[Then('/^(?:the |an? )?(?|"(?P<factoryShortName>[^"]+)"|(?!\d)(?P<factoryShortName>\S+)) (?:(?:called |named ))?(?|"(?P<objectName>[^"]+)"|(?P<objectName>\S+)) should (?:exist and )?have(?: properties)?$/')]
     public function assertObjectHasProperties(FoundryTableNode $table, string $factoryShortName, string $objectName): void
     {
         parent::assertObjectHasProperties($table, $factoryShortName, $objectName);
     }
 
     #[\Override]
-    #[Then('/^(?:the |an? )?(?!\d)(?|"(?P<factoryShortName>[^"]+)"|(?P<factoryShortName>\S+)) (?:(?:called |named ))?(?|"(?P<objectName>[^"]+)"|(?P<objectName>\S+)) should exist$/')]
+    #[Then('/^(?:the |an? )?(?|"(?P<factoryShortName>[^"]+)"|(?!\d)(?P<factoryShortName>\S+)) (?:(?:called |named ))?(?|"(?P<objectName>[^"]+)"|(?P<objectName>\S+)) should exist$/')]
     public function assertObjectExists(string $factoryShortName, string $objectName): void
     {
         parent::assertObjectExists($factoryShortName, $objectName);
     }
 
     #[\Override]
-    #[Then('/^(?:the |an? )?(?!\d)(?|"(?P<factoryShortName>[^"]+)"|(?P<factoryShortName>\S+)) (?:(?:called |named ))?(?|"(?P<objectName>[^"]+)"|(?P<objectName>\S+)) should not exist$/')]
+    #[Then('/^(?:the |an? )?(?|"(?P<factoryShortName>[^"]+)"|(?!\d)(?P<factoryShortName>\S+)) (?:(?:called |named ))?(?|"(?P<objectName>[^"]+)"|(?P<objectName>\S+)) should not exist$/')]
     public function assertObjectDoesNotExist(string $factoryShortName, string $objectName): void
     {
         parent::assertObjectDoesNotExist($factoryShortName, $objectName);
