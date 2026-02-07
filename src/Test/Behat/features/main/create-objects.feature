@@ -32,7 +32,7 @@ Feature: Test objects creation
       | name     |
       | John Doe |
       | Jane Doe |
-    Then an "InvalidArgumentException" exception should be thrown containing message "Expected exactly one line of properties, to create one object"
+    Then an "InvalidArgumentException" exception should be thrown containing message "Expected exactly one line of properties to create one object, got 2 lines"
 
   Scenario: Can create entity with properties via PyTable (!)
     Given there is a "i don't exist"

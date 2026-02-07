@@ -47,7 +47,11 @@ abstract class AbstractFoundryContext implements Context
         $parametersList = $table->getColumnsHash();
 
         if (1 !== \count($parametersList)) {
-            throw new \InvalidArgumentException('Expected exactly one line of properties, to create one object.');
+            throw new \InvalidArgumentException(\sprintf(
+                'Expected exactly one line of properties to create one object, got %d lines. Use "there are %s with" to create multiple objects.',
+                \count($parametersList),
+                $factoryShortName,
+            ));
         }
 
         $factory->create($parametersList[0]);
@@ -77,7 +81,10 @@ abstract class AbstractFoundryContext implements Context
         $parametersList = $table->getColumnsHash();
 
         if (1 !== \count($parametersList)) {
-            throw new \InvalidArgumentException('Expected exactly one line of properties.');
+            throw new \InvalidArgumentException(\sprintf(
+                'Expected exactly one line of properties for assertion, got %d lines.',
+                \count($parametersList),
+            ));
         }
 
         $object = $this->objectRegistry->getByFactoryShortName($factoryShortName, $objectName);
