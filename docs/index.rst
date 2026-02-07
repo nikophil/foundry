@@ -2945,6 +2945,9 @@ the category named "tech" in the registry.
           | title   | category                  |
           | My Post | <ref(category, tech)>     |
 
+    The ``<ref(type, name)>`` syntax is an escape hatch for edge cases where automatic type resolution fails.
+    Prefer using automatic resolution (just the object name) whenever possible, as it is cleaner and more readable.
+
 .. note::
 
     Objects can be referenced by their name until the next database reset occurs. How long they persist depends on your
