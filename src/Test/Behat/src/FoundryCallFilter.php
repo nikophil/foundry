@@ -59,7 +59,7 @@ final class FoundryCallFilter implements CallFilter
 
         if (!isset($arguments['factoryShortName'])) {
             throw new \InvalidArgumentException(<<<ERROR
-                Cannot filter call without a "\$factoryShortName" argument. 
+                Cannot filter call without a "\$factoryShortName" argument.
                 This must be the name of the argument in the #[Given], #[When], #[Then] definitions."
                 ERROR);
         }
@@ -85,7 +85,7 @@ final class FoundryCallFilter implements CallFilter
         $table = $tableNode->getTable();
 
         $headKey = \array_key_first($table);
-        $thead = \array_shift($table);
+        $thead = \array_shift($table) ?? throw new \LogicException('Table has no header row.');
 
         return FoundryTableNode::create(
             $this->factoryResolver,
@@ -98,95 +98,92 @@ final class FoundryCallFilter implements CallFilter
             [ // @phpstan-ignore argument.type (TableNode has the same problem: array $table is not really lists)
                 $headKey => $thead, // @phpstan-ignore array.invalidKey
                 ...\array_map(
-                    function(array $parameters) use ($thead, $factoryShortName): array {
-                        $normalized = [];
-                        foreach ($parameters as $key => $value) {
-                            if (!isset($thead[$key])) {
-                                throw new \LogicException("Table has no column for parameter \"{$key}\". This should never happen, table integrity is checked in TableNode.");
-                            }
-
-                            $propertyName = $thead[$key];
-
-                            if ('_ref' === $propertyName) {
-                                $normalized['_ref'] = $value;
-
-                                continue;
-                            }
-
-                            if ('null' === $value) {
-                                $normalized[$propertyName] = null;
-
-                                continue;
-                            }
-
-                            if ('true' === $value) {
-                                $normalized[$propertyName] = true;
-
-                                continue;
-                            }
-
-                            if ('false' === $value) {
-                                $normalized[$propertyName] = false;
-
-                                continue;
-                            }
-
-                            if (\preg_match('/^<ref\((?<factoryShortName>[^,]+), (?<objectName>[^)]+)\)>$/', $value, $matches)) {
-                                try {
-                                    $normalized[$propertyName] = $this->objectRegistry->getByFactoryShortName($matches['factoryShortName'], $matches['objectName']);
-                                } catch (ObjectNotFound $e) {
-                                    throw InvalidObjectParameter::objectReferencedInTableDoesNotExist($propertyName, $e);
-                                }
-
-                                continue;
-                            }
-
-                            $targetClass = $this->factoryResolver->targetObjectClassFor($factoryShortName);
-                            $expectedTypeClass = $this->getPropertyTypeIfClass(new \ReflectionClass($targetClass), $propertyName);
-
-                            if (!$expectedTypeClass) {
-                                $normalized[$propertyName] = $value;
-
-                                continue;
-                            }
-
-                            if ($this->factoryResolver->hasFactoryForClass($expectedTypeClass)) {
-                                try {
-                                    $normalized[$propertyName] = $this->objectRegistry->getByObjectClass($expectedTypeClass, $value);
-                                } catch (ObjectNotFound $e) {
-                                    throw InvalidObjectParameter::objectReferencedInTableDoesNotExist($propertyName, $e);
-                                }
-
-                                continue;
-                            }
-
-                            if (\is_a($expectedTypeClass, \DateTimeInterface::class, allow_string: true)) {
-                                try {
-                                    $normalized[$propertyName] = new $expectedTypeClass($value);
-
-                                    continue;
-                                } catch (\Throwable $e) { // @phpstan-ignore catch.neverThrown
-                                    throw InvalidObjectParameter::invalidDate($propertyName, $value, $e);
-                                }
-                            }
-
-                            if (\is_a($expectedTypeClass, \BackedEnum::class, allow_string: true)) {
-                                $value = \is_numeric($value) ? (int) $value : $value;
-
-                                $normalized[$propertyName] = $expectedTypeClass::tryFrom($value) ?? throw InvalidObjectParameter::invalidEnumValue($propertyName, (string) $value);
-
-                                continue;
-                            }
-
-                            throw new \LogicException("Cannot normalize parameter \"{$propertyName}\" with value \"{$value}\".");
-                        }
-
-                        return $normalized;
-                    },
+                    fn(array $parameters) => $this->normalizeTableRow($parameters, $thead, $factoryShortName),
                     $table
                 ),
             ]
         );
+    }
+
+    /**
+     * @param list<string> $parameters
+     * @param list<string> $thead
+     *
+     * @return array<string, mixed>
+     */
+    private function normalizeTableRow(array $parameters, array $thead, string $factoryShortName): array
+    {
+        $normalized = [];
+        foreach ($parameters as $key => $value) {
+            if (!isset($thead[$key])) {
+                throw new \LogicException("Table has no column for parameter \"{$key}\". This should never happen, table integrity is checked in TableNode.");
+            }
+
+            $propertyName = $thead[$key];
+
+            if ('_ref' === $propertyName) {
+                $normalized['_ref'] = $value;
+
+                continue;
+            }
+
+            $normalized[$propertyName] = match (true) {
+                'null' === $value => null,
+                'true' === $value => true,
+                'false' === $value => false,
+                default => $this->resolveExplicitObjectReference($propertyName, $value)
+                    ?? $this->resolveObjectReferenceBasedOnPropertyType($propertyName, $value, $factoryShortName),
+            };
+        }
+
+        return $normalized;
+    }
+
+    private function resolveExplicitObjectReference(string $propertyName, string $value): ?object
+    {
+        if (!\preg_match('/^<ref\((?<factoryShortName>[^,]+), (?<objectName>[^)]+)\)>$/', $value, $matches)) {
+            return null;
+        }
+
+        try {
+            return $this->objectRegistry->getByFactoryShortName($matches['factoryShortName'], $matches['objectName']);
+        } catch (ObjectNotFound $e) {
+            throw InvalidObjectParameter::objectReferencedInTableDoesNotExist($propertyName, $e);
+        }
+    }
+
+    private function resolveObjectReferenceBasedOnPropertyType(string $propertyName, string $value, string $factoryShortName): mixed
+    {
+        $targetClass = $this->factoryResolver->targetObjectClassFor($factoryShortName);
+        $expectedTypeClass = $this->getPropertyTypeIfClass(new \ReflectionClass($targetClass), $propertyName);
+
+        if (!$expectedTypeClass) {
+            return $value;
+        }
+
+        if ($this->factoryResolver->hasFactoryForClass($expectedTypeClass)) {
+            try {
+                return $this->objectRegistry->getByObjectClass($expectedTypeClass, $value);
+            } catch (ObjectNotFound $e) {
+                throw InvalidObjectParameter::objectReferencedInTableDoesNotExist($propertyName, $e);
+            }
+        }
+
+        if (\is_a($expectedTypeClass, \DateTimeInterface::class, allow_string: true)) {
+            try {
+                return new $expectedTypeClass($value);
+            } catch (\Throwable $e) { // @phpstan-ignore catch.neverThrown
+                throw InvalidObjectParameter::invalidDate($propertyName, $value, $e);
+            }
+        }
+
+        if (\is_a($expectedTypeClass, \BackedEnum::class, allow_string: true)) {
+            $value = \is_numeric($value) ? (int) $value : $value;
+
+            return $expectedTypeClass::tryFrom($value) ?? throw InvalidObjectParameter::invalidEnumValue($propertyName, (string) $value);
+        }
+
+        throw new \LogicException("Cannot normalize parameter \"{$propertyName}\" with value \"{$value}\".");
     }
 
     /**
