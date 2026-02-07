@@ -30,6 +30,9 @@ final class FactoryShortNameResolver
      */
     private array $factoryMap = [];
 
+    /** @var array<class-string, string> */
+    private array $classToShortName = [];
+
     /**
      * @param iterable<Factory<mixed>> $factories
      */
@@ -53,6 +56,8 @@ final class FactoryShortNameResolver
             $plural = \mb_strtolower($this->factoryShortNameAttribute($factory::class)->pluralName ?? $inflector->pluralize($shortName)[0]);
             $this->factoryMap[$plural] ??= [];
             $this->factoryMap[$plural][] = $factory;
+
+            $this->classToShortName[$factory::class()] = $shortName;
         }
     }
 
@@ -91,13 +96,7 @@ final class FactoryShortNameResolver
      */
     public function hasFactoryForClass(string $className): bool
     {
-        return array_any(
-            $this->factoryMap,
-            static fn(array $factories) => array_any(
-                $factories,
-                static fn(ObjectFactory $factory) => $factory::class() === $className,
-            )
-        );
+        return isset($this->classToShortName[$className]);
     }
 
     /**
@@ -105,13 +104,7 @@ final class FactoryShortNameResolver
      */
     public function getShortNameForClass(string $className): string
     {
-        return array_find_key( // @phpstan-ignore return.type (PHPStan bug)
-            $this->factoryMap,
-            static fn(array $factories) => array_any(
-                $factories,
-                static fn(ObjectFactory $factory) => $factory::class() === $className,
-            )
-        );
+        return $this->classToShortName[$className] ?? throw new \LogicException("No factory found for class \"{$className}\".");
     }
 
     /**
