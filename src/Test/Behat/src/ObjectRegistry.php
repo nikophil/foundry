@@ -11,6 +11,7 @@
 
 namespace Zenstruck\Foundry\Test\Behat;
 
+use Symfony\Component\Uid\AbstractUid;
 use Zenstruck\Foundry\Persistence\Event\AfterPersist;
 use Zenstruck\Foundry\Persistence\PersistenceManager;
 use Zenstruck\Foundry\Story\Event\StateAddedToStory;
@@ -162,8 +163,13 @@ final class ObjectRegistry
         }
 
         $id = array_first($ids);
+
+        if ($id instanceof AbstractUid) {
+            return $id->toRfc4122();
+        }
+
         if (!\is_int($id) && !\is_string($id)) {
-            throw new \InvalidArgumentException(\sprintf('Wrong type for the id: expected int or string, got "%s".', \get_debug_type($id)));
+            throw new \InvalidArgumentException(\sprintf('Wrong type for the id: expected int, string or Uid, got "%s".', \get_debug_type($id)));
         }
 
         return $id;

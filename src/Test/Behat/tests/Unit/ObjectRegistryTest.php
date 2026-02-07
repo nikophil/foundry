@@ -13,6 +13,7 @@ namespace Zenstruck\Foundry\Test\Behat\Tests\Unit\Test\Behat;
 
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\Uid\Uuid;
 use Zenstruck\Foundry\ObjectFactory;
 use Zenstruck\Foundry\Persistence\Event\AfterPersist;
 use Zenstruck\Foundry\Persistence\PersistenceManager;
@@ -146,6 +147,25 @@ final class ObjectRegistryTest extends TestCase
     }
 
     #[Test]
+    public function it_stores_uuid_from_after_persist_event(): void
+    {
+        $uuid = Uuid::v7();
+
+        $persistenceManager = $this->createStub(PersistenceManager::class);
+        $persistenceManager->method('getIdentifierValues')->willReturn(['id' => $uuid]);
+
+        $registry = new ObjectRegistry($this->resolver, $persistenceManager);
+        $registry->reset();
+
+        $user = new User(id: 1, name: 'John');
+        $event = new AfterPersist($user, [], $this->createStub(PersistentObjectFactory::class));
+
+        $registry->storeLastId($event);
+
+        self::assertSame($uuid->toRfc4122(), $registry->lastId());
+    }
+
+    #[Test]
     public function it_throws_when_no_last_id_available(): void
     {
         $this->expectException(\RuntimeException::class);
@@ -252,7 +272,7 @@ final class ObjectRegistryTest extends TestCase
         $registry->storeLastId($event);
 
         $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('Wrong type for the id: expected int or string, got "array".');
+        $this->expectExceptionMessage('Wrong type for the id: expected int, string or Uid, got "array".');
 
         $registry->lastId();
     }
