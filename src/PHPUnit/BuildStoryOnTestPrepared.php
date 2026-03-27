@@ -33,9 +33,22 @@ final class BuildStoryOnTestPrepared implements Event\Test\PreparedSubscriber
 
         /** @var Event\Code\TestMethod $test */
         $reflectionClass = new \ReflectionClass($test->className());
+
+        $methodAttributes = $reflectionClass->getMethod($test->methodName())->getAttributes(WithStory::class);
+
+        $this->validateNoSharedOnMethods($test->className(), $methodAttributes);
+
+        // Shared stories: restore DAMA connections and rollback to savepoint (per-test isolation)
+        if (SharedStoryState::isActive() && SharedStoryState::testClassName() === $test->className()) {
+            SharedStoryState::restoreConnections();
+            SharedStoryState::rollbackToSavepoint();
+
+            return;
+        }
+
         $withStoryAttributes = [
             ...AttributeReader::collectAttributesFromClassAndParents(WithStory::class, $reflectionClass),
-            ...$reflectionClass->getMethod($test->methodName())->getAttributes(WithStory::class),
+            ...$methodAttributes,
         ];
 
         if (!$withStoryAttributes) {
@@ -48,6 +61,19 @@ final class BuildStoryOnTestPrepared implements Event\Test\PreparedSubscriber
 
         foreach ($withStoryAttributes as $withStoryAttribute) {
             $withStoryAttribute->newInstance()->story::load();
+        }
+    }
+
+    /**
+     * @param class-string $className
+     * @param list<\ReflectionAttribute<WithStory>> $methodAttributes
+     */
+    private function validateNoSharedOnMethods(string $className, array $methodAttributes): void
+    {
+        foreach ($methodAttributes as $attr) {
+            if ($attr->newInstance()->shared) {
+                throw new \InvalidArgumentException(\sprintf('#[WithStory(shared: true)] cannot be used on methods, only on classes. Found on "%s".', $className));
+            }
         }
     }
 }

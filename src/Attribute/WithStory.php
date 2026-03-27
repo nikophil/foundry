@@ -21,6 +21,7 @@ final class WithStory
     public function __construct(
         /** @var class-string<Story> $story */
         public readonly string $story,
+        public readonly bool $shared = false,
     ) {
         if (!\is_subclass_of($story, Story::class)) {
             throw new \InvalidArgumentException(\sprintf('"%s" is not a valid story class.', $story));

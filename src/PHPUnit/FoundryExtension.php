@@ -51,7 +51,11 @@ if (\interface_exists(Runner\Extension\Extension::class)) {
 
             // ⚠️ order matters within each event
             $subscribers = [
-                Event\TestSuite\Started::class => [new ResetDatabaseOnTestSuiteStarted($autoResetEnabled)],
+                Event\TestSuite\Started::class => [
+                    new ResetDatabaseOnTestSuiteStarted($autoResetEnabled),
+                    new LoadSharedStoryOnTestSuiteStarted(),
+                ],
+                Event\TestSuite\Finished::class => [new CleanupSharedStoryOnTestSuiteFinished()],
                 Event\Test\DataProviderMethodCalled::class => [new BootFoundryOnDataProviderMethodCalled()],
                 Event\Test\DataProviderMethodFinished::class => [new ShutdownFoundryOnDataProviderMethodFinished()],
                 Event\Test\PreparationStarted::class => [
@@ -63,7 +67,10 @@ if (\interface_exists(Runner\Extension\Extension::class)) {
                     new BuildStoryOnTestPrepared(),
                     new TriggerDataProviderPersistenceOnTestPrepared(),
                 ],
-                Event\Test\Finished::class => [new ShutdownFoundryOnTestFinished()],
+                Event\Test\Finished::class => [
+                    new NeutralizeDamaOnTestFinished(),
+                    new ShutdownFoundryOnTestFinished(),
+                ],
                 Event\TestRunner\Finished::class => [new DisplayFakerSeedOnApplicationFinished()],
             ];
 

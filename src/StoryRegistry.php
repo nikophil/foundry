@@ -22,6 +22,11 @@ final class StoryRegistry
     private static array $globalInstances = [];
 
     /** @var array<string,Story> */
+    private static array $classInstances = [];
+
+    private static bool $loadingClassStories = false;
+
+    /** @var array<string,Story> */
     private static array $instances = [];
 
     /**
@@ -45,14 +50,19 @@ final class StoryRegistry
             return self::$globalInstances[$class]; // @phpstan-ignore return.type
         }
 
+        if (\array_key_exists($class, self::$classInstances)) {
+            return self::$classInstances[$class]; // @phpstan-ignore return.type
+        }
+
         if (\array_key_exists($class, self::$instances)) {
             return self::$instances[$class]; // @phpstan-ignore return.type
         }
 
-        self::$instances[$class] = $this->getOrCreateStory($class);
-        self::$instances[$class]->build();
+        $target = self::$loadingClassStories ? 'classInstances' : 'instances';
+        self::${$target}[$class] = $this->getOrCreateStory($class);
+        self::${$target}[$class]->build();
 
-        return self::$instances[$class];
+        return self::${$target}[$class];
     }
 
     public function loadGlobalStories(): void
@@ -70,6 +80,21 @@ final class StoryRegistry
     public static function reset(): void
     {
         self::$instances = [];
+    }
+
+    public static function beginLoadingClassStories(): void
+    {
+        self::$loadingClassStories = true;
+    }
+
+    public static function endLoadingClassStories(): void
+    {
+        self::$loadingClassStories = false;
+    }
+
+    public static function resetClassInstances(): void
+    {
+        self::$classInstances = [];
     }
 
     /**
