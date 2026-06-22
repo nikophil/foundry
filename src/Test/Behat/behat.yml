@@ -24,6 +24,7 @@ default:
             paths: [features/main]
             contexts: &common_contexts
                 - Behat\MinkExtension\Context\MinkContext
+                - Zenstruck\Foundry\Test\Behat\FoundryContext
                 - Zenstruck\Foundry\Test\Behat\Tests\Fixture\TestFoundryContext
 
 main-no-dama:
@@ -112,5 +113,23 @@ reset-disabled:
             paths: [features/reset-disabled]
             contexts:
                 - Behat\MinkExtension\Context\MinkContext
+                - Zenstruck\Foundry\Test\Behat\FoundryContext
                 - Zenstruck\Foundry\Test\Behat\Tests\Fixture\TestFoundryContext
                 - Zenstruck\Foundry\Test\Behat\Tests\Fixture\ResetDisabledTestContext
+
+override-steps:
+    extensions:
+        Zenstruck\Foundry\Test\Behat\FoundryExtension:
+            database_reset_mode: scenario
+            enable_dama_support: true
+            steps:
+                'there is a(n) :factoryShortName named :objectName': 'create a :factoryShortName called :objectName'
+                'there are :factoryShortName with:': 'the following :factoryShortName exist:'
+                # transformations (#[Transform]) go through the same translator: they can be re-worded too
+                '/(.*)<lastId>(.*)/': '/(.*)\[lastId\](.*)/'
+
+    suites:
+        main: false
+        override-steps:
+            paths: [features/override-steps]
+            contexts: *common_contexts

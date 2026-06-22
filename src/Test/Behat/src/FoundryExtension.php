@@ -23,6 +23,7 @@ use Zenstruck\Foundry\Test\Behat\Exception\DamaNativeExtensionIncompatibility;
 use Zenstruck\Foundry\Test\Behat\Listener\BootConfigurationListener;
 use Zenstruck\Foundry\Test\Behat\Listener\DatabaseResetListener;
 use Zenstruck\Foundry\Test\Behat\Listener\LoadFixturesListener;
+use Zenstruck\Foundry\Test\Behat\Listener\StepTranslationsListener;
 
 final class FoundryExtension implements Extension
 {
@@ -50,6 +51,23 @@ final class FoundryExtension implements Extension
                 ->booleanNode('enable_dama_support')
                     ->defaultFalse()
                 ->end()
+                ->arrayNode('steps')
+                    ->info('Override built-in step definitions: map a canonical pattern to your own wording (keep the same placeholders/capture groups).')
+                    ->normalizeKeys(false)
+                    ->scalarPrototype()->end()
+                ->end()
+                ->arrayNode('translations')
+                    ->info('Paths to translation catalogues (xliff/yaml/php) overriding built-in step patterns.')
+                    ->beforeNormalization()
+                        ->ifString()
+                        ->then(static fn(string $v): array => [$v])
+                    ->end()
+                    ->scalarPrototype()->end()
+                ->end()
+                ->scalarNode('locale')
+                    ->info('Locale the step overrides apply to. Matches the ".feature" language (defaults to "en"), not the CLI "--lang" option.')
+                    ->defaultValue('en')
+                ->end()
             ->end()
             ->validate()
                 ->ifTrue(static fn(array $v): bool => $v['enable_dama_support'] && DatabaseResetMode::DISABLED->value === $v['database_reset_mode'])
@@ -70,6 +88,15 @@ final class FoundryExtension implements Extension
         $container->register(FoundryCallFilter::class)
             ->setArgument('$symfonyKernel', new Reference('fob_symfony.kernel'))
             ->addTag(CallExtension::CALL_FILTER_TAG);
+
+        if ($config['steps'] || $config['translations']) {
+            $container->register('.zenstruck_foundry.behat.listener.step_translations', StepTranslationsListener::class)
+                ->setArgument('$translator', new Reference('translator'))
+                ->setArgument('$steps', $config['steps'])
+                ->setArgument('$translations', $config['translations'])
+                ->setArgument('$locale', $config['locale'])
+                ->addTag(EventDispatcherExtension::SUBSCRIBER_TAG);
+        }
 
         $databaseResetMode = DatabaseResetMode::from($config['database_reset_mode']);
 

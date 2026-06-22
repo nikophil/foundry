@@ -22,17 +22,17 @@ Feature: Test @withFixture tag
   @withFixture(behat-contacts)
   Scenario: Can access entities from fixture
     Then 1 contact should exist
-    Then contact "john-doe" should have properties
+    Then contact named "john-doe" should have properties:
       | name     |
       | John Doe |
 
   @withFixture(behat-category)
   Scenario: Can use entities from fixture in another entity
-    Given there is a contact "jane-doe" with
+    Given there is a contact named "jane-doe" with:
       | name     | category         |
       | Jane Doe | category fixture |
     Then 1 contact should exist
-    Then contact "jane-doe" should have properties
+    Then contact named "jane-doe" should have properties:
       | name     | category         |
       | Jane Doe | category fixture |
 

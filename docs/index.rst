@@ -2856,20 +2856,16 @@ Create objects
     Given there is a contact
 
     # Create a named object: this name will be useful for later reference
-    Given there is a contact "john"
-
-    # You can also use "called" or "named" keywords
-    Given there is a contact called "john"
     Given there is a contact named "john"
 
     # Create an object with properties
-    Given there is a contact called "john" with
+    Given there is a contact named "john" with:
       | name     | email          |
       | John Doe | john@email.com |
 
     # Create multiple objects
     # Notice that you can use the plural form of the factory name
-    Given there are contacts with
+    Given there are contacts with:
       | _ref | name     |
       | A    | John Doe |
       | B    | Jane Doe |
@@ -2884,8 +2880,8 @@ The ``_ref`` column is a special column that allows you to name the created obje
     .. code-block:: gherkin
 
         # both are equivalent
-        Given there is a "contact" "john"
-        Given there is a contact john
+        Given there is a "contact" named "john"
+        Given there is a contact named john
 
         # quoting is required for multi-word factory names
         Given there is a "blog post" named "Foundry rocks"
@@ -2909,7 +2905,7 @@ When using properties in Gherkin tables, Foundry automatically converts string v
 
 .. code-block:: gherkin
 
-    Given there is a post "my-post" with
+    Given there is a post named "my-post" with:
       | title   | category | publishedAt | status       | body |
       | My Post | tech     | 2026-01-15  | published    | null |
 
@@ -2926,8 +2922,8 @@ Referencing objects in another object
 
 .. code-block:: gherkin
 
-    Given there is a category "tech"
-    Given there is a post "my-post" with
+    Given there is a category named "tech"
+    Given there is a post named "my-post" with:
       | title   | category |
       | My Post | tech     |
 
@@ -2940,8 +2936,8 @@ the category named "tech" in the registry.
 
     .. code-block:: gherkin
 
-        Given there is a category "tech"
-        Given there is a post "my-post" with
+        Given there is a category named "tech"
+        Given there is a post named "my-post" with:
           | title   | category                  |
           | My Post | <ref(category, tech)>     |
 
@@ -2964,25 +2960,25 @@ Assertions
     Then 2 contacts should exist
 
     # assert a specific object has properties
-    Then contact "john" should have properties
+    Then contact named "john" should have properties:
       | name     |
       | John Doe |
 
     # You can also use various natural language forms:
-    Then the contact "john" should exist and have properties
+    Then the contact named "john" should exist and have properties:
       | name     |
       | John Doe |
 
     # assert if objects are persisted or not
-    Then contact "john" should exist
-    Then contact "jane" should not exist
+    Then contact named "john" should exist
+    Then contact named "jane" should not exist
 
 Accessing ids of created objects
 ................................
 
 .. code-block:: gherkin
 
-    Given there is a contact "john"
+    Given there is a contact named "john"
 
     # Access the last id created
     When I am on "/contacts/<lastId>"
@@ -3007,30 +3003,70 @@ Overriding built-in step definitions
 ....................................
 
 If the built-in step definitions don't fit your need or conflict with your own contexts and step definitions, you can
-define you own "Foundry context" with the definitions' name of your choice:
-- Create your own context class which extends ``Zenstruck\Foundry\Test\Behat\AbstractFoundryContext``
-- Declare a service for your own context:
+**re-word** them right from the extension configuration, without writing any PHP. Map each built-in pattern to your own
+wording under the ``steps`` key:
 
 .. code-block:: yaml
 
-    # config/services.yaml
-    when@test:
-        services:
-            App\Tests\Behat\Context\CustomFoundryContext:
-                parent: zenstruck_foundry.behat.context.parent
+    default:
+        extensions:
+            Zenstruck\Foundry\Test\Behat\FoundryExtension:
+                steps:
+                    # "built-in pattern": "your wording"
+                    'there is a(n) :factoryShortName named :objectName': 'create a :factoryShortName called :objectName'
+                    'there are :factoryShortName with:': 'the following :factoryShortName exist:'
 
-You can use ``Zenstruck\Foundry\Test\Behat\FoundryContext`` as an example of how to implement the step definitions, and
-define your own language to create objects with Foundry.
+You can now write:
+
+.. code-block:: gherkin
+
+    Given create a contact called "john"
+
+The built-in wording is fully replaced: only the patterns you override change, every other built-in step keeps working
+(and you automatically benefit from new built-in steps added in the future).
+
+For larger customizations, you can point to one or several translation catalogues (``xliff``, ``yaml`` or ``php``) instead
+of (or in addition to) the inline map:
+
+.. code-block:: yaml
+
+    default:
+        extensions:
+            Zenstruck\Foundry\Test\Behat\FoundryExtension:
+                translations: '%paths.base%/tests/behat/foundry-steps.xliff'
+
+.. code-block:: xml
+
+    <!-- tests/behat/foundry-steps.xliff -->
+    <?xml version="1.0" encoding="UTF-8"?>
+    <xliff xmlns="urn:oasis:names:tc:xliff:document:1.2" version="1.2">
+        <file source-language="en" datatype="plaintext" original="foundry-steps">
+            <body>
+                <trans-unit id="1">
+                    <source>there is a(n) :factoryShortName named :objectName</source>
+                    <target>create a :factoryShortName called :objectName</target>
+                </trans-unit>
+            </body>
+        </file>
+    </xliff>
 
 .. warning::
 
-    Your custom step definitions must use the same "capturing groups" with the same names as the built-in ones
-    (``factoryShortName`` and ``objectName``). Otherwise, some of the definitions won't work.
+    Your wording must keep the same **placeholders / capturing groups** as the built-in pattern (``:factoryShortName``
+    and ``:objectName`` for turnip patterns, ``(?P<factoryShortName>...)`` and ``(?P<objectName>...)`` for regex
+    patterns). Otherwise the step won't be able to call the underlying method.
 
-.. warning::
+.. note::
 
-    By overriding built-in step definitions, you won't automatically benefit from the potentially new definition
-    that we will add to the built-in context in the future. You will need to manually add them to your own context.
+    Overrides apply to the language of your ``.feature`` files (the ``# language:`` header, defaulting to ``en``), **not**
+    to the CLI ``--lang`` option. If your features are written in another language, set the ``locale`` option accordingly:
+
+    .. code-block:: yaml
+
+        Zenstruck\Foundry\Test\Behat\FoundryExtension:
+            locale: fr
+            steps:
+                'there is a(n) :factoryShortName named :objectName': 'il existe un(e) :factoryShortName nommé :objectName'
 
 Loading Fixtures with Tags
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -3066,7 +3102,7 @@ Then use the ``@withFixture`` tag to load a Story before a scenario:
     Scenario: Assert john exists
       # Objects added with "addState()" are automatically available in the objects registry and can be
       # referenced in your scenarios.
-      Then contact "john" should have properties
+      Then contact named "john" should have properties:
         | name     |
         | John     |
 
@@ -3080,7 +3116,7 @@ The ``@withFixture`` tag can also be used on a **feature** to load fixtures once
         Then 3 contacts should exist
 
       Scenario: Find john
-        Then contact "john" should exist
+        Then contact named "john" should exist
 
 .. tip::
 

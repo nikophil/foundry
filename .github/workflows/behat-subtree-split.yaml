@@ -1,0 +1,22 @@
+name: 'Packages Split'
+
+on:
+  push:
+    branches: [2.x]
+
+jobs:
+  packages_split:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: danharrin/monorepo-split-github-action@v2.4.5
+        env:
+          GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+        with:
+          package_directory: 'src/Test/Behat'
+          repository_organization: 'zenstruck'
+          repository_name: 'foundry-behat'
+          user_name: 'nikophil'
+          user_email: 'nicolas.philippe@mapado.com'
+          branch: '0.x'

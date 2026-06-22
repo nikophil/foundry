@@ -4,7 +4,7 @@ Feature: Database isolation per feature - Part 2
     Then 0 contacts should exist
 
   Scenario: Second scenario in new feature sees first scenario's data
-    Given there is a "contact" "C" with
+    Given there is a "contact" named "C" with:
       | name      |
       | Alice Doe |
     Then 1 contact should exist
@@ -13,6 +13,6 @@ Feature: Database isolation per feature - Part 2
     Then 1 contact should exist
 
   Scenario: Could access data created in previous scenario
-    Then "contact" "C" should have properties
+    Then "contact" named "C" should have properties:
       | name      |
       | Alice Doe |

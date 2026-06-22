@@ -77,6 +77,9 @@ jobs:
       - name: Reset DB disabled
         run: vendor/bin/behat --colors -vvv --profile=reset-disabled
 
+      - name: Overriding built-in step definitions
+        run: vendor/bin/behat --colors -vvv --profile=override-steps
+
   phpunit:
     name: PHPUnit - P:${{ matrix.php }}, S:${{ matrix.symfony }}${{ matrix.deps == 'lowest' && ' (lowest)' || '' }}
     runs-on: ubuntu-latest

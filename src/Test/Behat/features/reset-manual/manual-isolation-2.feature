@@ -4,7 +4,7 @@ Feature: Manual database isolation (disabled mode) - Part 2
     Then 2 contacts should exist
 
     # ObjectRegistry is reset between features even when isolation is disabled
-    Then contact A should not exist
+    Then contact named A should not exist
 
   @resetDB
   Scenario: DB should be reset

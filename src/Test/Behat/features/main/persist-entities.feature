@@ -7,7 +7,7 @@ Feature: Test persisting entities
 
   Scenario: Can persist entities
     # Can name entities
-    Given there is a contact A
+    Given there is a contact named A
     # Can create unnamed entities
     And there is a contact
     When I am on "/"
@@ -36,12 +36,12 @@ Feature: Test persisting entities
       | World |
 
   Scenario: Can access last created entity ID
-    Given there is a "generic entity" "the object" with
+    Given there is a "generic entity" named "the object" with:
       | prop1 |
       | foo   |
     When I am on "/orm/update/<lastId>/bar"
     Then the response status code should be 200
-    Then "generic entity" "the object" should have properties
+    Then "generic entity" named "the object" should have properties:
       | prop1 |
       | bar   |
 
@@ -50,13 +50,13 @@ Feature: Test persisting entities
     Then an "RuntimeException" exception should be thrown containing message "No last id found"
 
   Scenario: Can access last created entity ID
-    Given there is a "generic entity" "the object" with
+    Given there is a "generic entity" named "the object" with:
       | prop1 |
       | foo   |
     And there is a contact
     When I am on "/orm/update/<lastId(generic entity)>/bar"
     Then the response status code should be 200
-    Then "generic entity" "the object" should have properties
+    Then "generic entity" named "the object" should have properties:
       | prop1 |
       | bar   |
 
@@ -65,12 +65,12 @@ Feature: Test persisting entities
     Then an "InvalidArgumentException" exception should be thrown containing message "No object of type \"generic entity\" found"
 
   Scenario: Can access an ID from reference
-    Given there is a "generic entity" "the object" with
+    Given there is a "generic entity" named "the object" with:
       | prop1 |
       | foo   |
     When I am on "/orm/update/<id(generic entity, the object)>/bar"
     Then the response status code should be 200
-    Then "generic entity" "the object" should have properties
+    Then "generic entity" named "the object" should have properties:
       | prop1 |
       | bar   |
 

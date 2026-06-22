@@ -47,9 +47,7 @@ final class LoadFixturesListener implements EventSubscriberInterface
 
         $tags = [];
 
-        if ($feature instanceof TaggedNodeInterface) {
-            $tags = [...$tags, ...$feature->getTags()];
-        }
+        $tags = [...$tags, ...$feature->getTags()];
 
         if ($scenario instanceof TaggedNodeInterface) {
             $tags = [...$tags, ...$scenario->getTags()];

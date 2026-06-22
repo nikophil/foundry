@@ -2,7 +2,7 @@ Feature: Test accessing Uuid-based entity ids
 
   Scenario: Can create and reference Uuid entity
     Given there is an "entity with uid" named "the object"
-    Then "entity with uid" "the object" should exist
+    Then "entity with uid" named "the object" should exist
 
   Scenario: Can access last id for Uuid entity via lastId transform
     Given there is an "entity with uid" named "A"
