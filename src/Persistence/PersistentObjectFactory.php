@@ -255,6 +255,12 @@ abstract class PersistentObjectFactory extends ObjectFactory
 
         try {
             return $factory->doCreate($attributes);
+        } catch (\Throwable $e) {
+            if (null !== $ownedScope) {
+                $configuration->persistence()->discardScheduled();
+            }
+
+            throw $e;
         } finally {
             $ownedScope?->close();
         }
@@ -578,7 +584,14 @@ abstract class PersistentObjectFactory extends ObjectFactory
                         };
                     }
 
-                    Configuration::instance()->persistence()->scheduleForInsert($object, $afterPersistCallbacks);
+                    $persistenceManager = Configuration::instance()->persistence();
+                    $persistenceManager->scheduleForInsert($object, $afterPersistCallbacks);
+
+                    // the root factory's hook is the single point where the whole object graph
+                    // is guaranteed instantiated and wired: persist everything now
+                    if ($factoryUsed->isRootFactory && PersistMode::PERSIST === $factoryUsed->persistMode()) {
+                        $persistenceManager->persistScheduled();
+                    }
                 },
                 self::PRIORITY_SCHEDULE_FOR_INSERT
             )
@@ -637,7 +650,7 @@ abstract class PersistentObjectFactory extends ObjectFactory
             return $object;
         }
 
-        if ($configuration->flushOnce && !$this->isRootFactory) {
+        if (!$this->isRootFactory) {
             return $object;
         }
 
