@@ -665,6 +665,19 @@ they were added, or by priority (higher priority hooks are executed first).
 
     Hook priority were added in Foundry 2.8.
 
+.. note::
+
+    When persistence is enabled, Foundry defers all ``EntityManager::persist()`` calls until the whole
+    object graph (the object being created and all its relations) is instantiated and wired. Doctrine
+    lifecycle events (e.g. "pre persist") are then triggered with fully populated relationships, exactly
+    like they would be with handwritten code, and a single flush occurs per root ``create()`` call.
+
+.. versionchanged:: 2.11
+
+    Before Foundry 2.11, ``EntityManager::persist()`` was called while the object graph was still being
+    built: "pre persist" listeners could observe empty collections, and factories nested in another
+    factory triggered their own flush.
+
 You can also add hooks directly in your factory class:
 
 ::

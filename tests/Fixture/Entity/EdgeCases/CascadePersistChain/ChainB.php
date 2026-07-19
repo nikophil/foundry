@@ -27,7 +27,6 @@ use Zenstruck\Foundry\Tests\Fixture\Model\Base;
 class ChainB extends Base
 {
     #[ORM\ManyToOne(targetEntity: ChainA::class, inversedBy: 'bs')]
-    #[ORM\JoinColumn(nullable: false)]
     private ?ChainA $a = null;
 
     /** @var Collection<int, ChainC> */

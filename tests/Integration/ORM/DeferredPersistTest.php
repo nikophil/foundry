@@ -140,7 +140,7 @@ final class DeferredPersistTest extends KernelTestCase
         $childFactory::assert()->count(2);
 
         $parent->name = 'updated';
-        self::getContainer()->get(EntityManagerInterface::class)->flush();
+        self::entityManager()->flush();
 
         $childFactory::assert()->count(2);
         self::assertSame(2, $parent->childrenCount);
@@ -154,7 +154,7 @@ final class DeferredPersistTest extends KernelTestCase
         $bFactory = persistent_factory(CascadePersistChain\ChainB::class);
         $cFactory = persistent_factory(CascadePersistChain\ChainC::class);
 
-        $eventManager = self::getContainer()->get(EntityManagerInterface::class)->getEventManager();
+        $eventManager = self::entityManager()->getEventManager();
         $listener = new class {
             public int $flushes = 0;
 
@@ -194,5 +194,10 @@ final class DeferredPersistTest extends KernelTestCase
 
         $aFactory::assert()->count(0);
         $bFactory::assert()->count(0);
+    }
+
+    private static function entityManager(): EntityManagerInterface
+    {
+        return self::getContainer()->get(EntityManagerInterface::class); // @phpstan-ignore return.type
     }
 }
