@@ -129,9 +129,32 @@ override-steps:
                 'there is a(n) :factoryShortName with:': '/^an? (\S+) exists with:$/'
                 # transformations (#[Transform]) go through the same translator: they can be re-worded too
                 '/(.*)<foundry:lastId\(\s*([^)]+?)\s*\)>(.*)/': '/(.*)\[lastId\(([^)]+?)\)\](.*)/'
+                # a built-in step can be disabled entirely: its wording becomes available for your own definitions
+                '/^(\d+) "([^"]*)" should exist$/': false
 
     suites:
         main: false
         override-steps:
             paths: [features/override-steps]
-            contexts: *common_contexts
+            contexts:
+                - Behat\MinkExtension\Context\MinkContext
+                - Zenstruck\Foundry\Test\Behat\FoundryContext
+                - Zenstruck\Foundry\Test\Behat\Tests\Fixture\TestFoundryContext
+                - Zenstruck\Foundry\Test\Behat\Tests\Fixture\CustomCountContext
+
+granular-contexts:
+    extensions:
+        Zenstruck\Foundry\Test\Behat\FoundryExtension:
+            database_reset_mode: scenario
+            enable_dama_support: true
+
+    suites:
+        main: false
+        granular-contexts:
+            paths: [features/granular-contexts]
+            contexts:
+                - Behat\MinkExtension\Context\MinkContext
+                - Zenstruck\Foundry\Test\Behat\FoundryCreationContext
+                - Zenstruck\Foundry\Test\Behat\FoundryPlaceholderContext
+                - Zenstruck\Foundry\Test\Behat\Tests\Fixture\TestFoundryContext
+                - Zenstruck\Foundry\Test\Behat\Tests\Fixture\CustomCountContext

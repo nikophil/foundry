@@ -51,6 +51,7 @@ class BehatTestKernel extends FoundryTestKernel
         $c->register(DeleteGenericModel::class)->setAutowired(true)->setAutoconfigured(true)->addTag('controller.service_arguments');
         $c->register(ResetDisabledTestContext::class)->setAutowired(true)->setAutoconfigured(true);
         $c->register(TestFoundryContext::class)->setAutowired(true)->setAutoconfigured(true);
+        $c->register(CustomCountContext::class)->setAutowired(true)->setAutoconfigured(true);
 
         $configurator->services()
             ->load('Zenstruck\\Foundry\\Test\\Behat\\Tests\\Fixture\\Factories\\', __DIR__.'/Factories')

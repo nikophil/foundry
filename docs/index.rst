@@ -2846,6 +2846,32 @@ To use it, add the following to your ``behat.yaml``:
                 contexts:
                     - Zenstruck\Foundry\Test\Behat\FoundryContext
 
+``FoundryContext`` provides every built-in step and transformation described below. If you only want a
+subset of them — for example because some wordings would conflict with your own step definitions — load
+one or several granular contexts instead:
+
+.. code-block:: yaml
+
+    default:
+        suites:
+            main:
+                contexts:
+                    # the "Given" steps creating objects
+                    - Zenstruck\Foundry\Test\Behat\FoundryCreationContext
+                    # the "Then" steps asserting on objects and on the database
+                    - Zenstruck\Foundry\Test\Behat\FoundryAssertionContext
+                    # the transformations resolving <foundry:...> id placeholders
+                    - Zenstruck\Foundry\Test\Behat\FoundryPlaceholderContext
+
+.. tip::
+
+    You can also compose your own context from the same building blocks: use the ``CreationSteps``,
+    ``AssertionSteps`` and/or ``PlaceholderTransforms`` traits in a class implementing
+    ``FoundryContextInterface``, with the same constructor as the built-in contexts (the
+    ``FactoryShortNameResolver`` and ``ObjectRegistry`` dependencies are autowireable).
+    Individual steps can also be disabled from the configuration, see
+    `Overriding built-in step definitions`_.
+
 Create objects
 ..............
 
@@ -3083,6 +3109,18 @@ You can now write:
 
 The built-in wording is fully replaced: only the patterns you override change, every other built-in step keeps working
 (and you automatically benefit from new built-in steps added in the future).
+
+A built-in step can also be **disabled** entirely by mapping its pattern to ``false``: it is not matched
+anymore, and its wording becomes available for your own step definitions. This also works for the
+built-in ``#[Transform]`` patterns:
+
+.. code-block:: yaml
+
+    default:
+        extensions:
+            Zenstruck\Foundry\Test\Behat\FoundryExtension:
+                steps:
+                    '/^(\d+) "([^"]*)" should exist$/': false
 
 For larger customizations, you can point to one or several translation catalogues (``xliff``, ``yaml`` or ``php``) instead
 of (or in addition to) the inline map:

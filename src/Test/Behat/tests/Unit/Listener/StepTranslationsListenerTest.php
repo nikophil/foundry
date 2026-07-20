@@ -84,6 +84,23 @@ final class StepTranslationsListenerTest extends TestCase
     }
 
     #[Test]
+    public function it_disables_a_step_mapped_to_false(): void
+    {
+        $translator = self::createTranslator();
+
+        $listener = new StepTranslationsListener(
+            $translator,
+            [self::CANONICAL_PATTERN => false],
+            [],
+            'en',
+        );
+
+        $listener->registerTranslations(self::createEvent('my-suite'));
+
+        self::assertSame('/(?!)/', $translator->trans(self::CANONICAL_PATTERN, [], 'my-suite', 'en'));
+    }
+
+    #[Test]
     public function it_throws_on_an_unsupported_translation_resource(): void
     {
         $listener = new StepTranslationsListener(self::createTranslator(), [], ['/path/to/steps.txt'], 'en');

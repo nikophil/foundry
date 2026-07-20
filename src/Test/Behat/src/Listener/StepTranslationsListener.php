@@ -21,14 +21,19 @@ use Zenstruck\Foundry\Test\Behat\Exception\UnsupportedTranslationResource;
  * Overrides the built-in step definition patterns by registering translations
  * for the canonical patterns onto Behat's translator.
  *
+ * A pattern mapped to false is disabled: it is re-worded to a regex that can
+ * never match, so its wording becomes available for the user's own definitions.
+ *
  * @internal
  * @author Nicolas PHILIPPE <nikophil@gmail.com>
  */
 final class StepTranslationsListener implements EventSubscriberInterface
 {
+    private const NEVER_MATCHING_PATTERN = '/(?!)/';
+
     /**
-     * @param array<string, string> $steps        canonical pattern => overriding pattern
-     * @param list<string>          $translations paths to xliff/yaml/php catalogues
+     * @param array<string, string|false> $steps        canonical pattern => overriding pattern, or false to disable
+     * @param list<string>                $translations paths to xliff/yaml/php catalogues
      */
     public function __construct(
         private readonly Translator $translator,
@@ -50,7 +55,15 @@ final class StepTranslationsListener implements EventSubscriberInterface
         $suiteName = $event->getSuite()->getName();
 
         if ($this->steps) {
-            $this->translator->addResource('array', $this->steps, $this->locale, $suiteName);
+            $this->translator->addResource(
+                'array',
+                \array_map(
+                    static fn(string|false $wording): string => false === $wording ? self::NEVER_MATCHING_PATTERN : $wording,
+                    $this->steps
+                ),
+                $this->locale,
+                $suiteName
+            );
         }
 
         foreach ($this->translations as $path) {

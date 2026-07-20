@@ -48,7 +48,7 @@ final class FoundryCallFilter implements CallFilter
 
         $reflection = $call->getCallee()->getReflection();
 
-        if (!$reflection instanceof \ReflectionMethod || FoundryContext::class !== $reflection->class) {
+        if (!$reflection instanceof \ReflectionMethod || !\is_a($reflection->class, FoundryContextInterface::class, true)) {
             return $call;
         }
 

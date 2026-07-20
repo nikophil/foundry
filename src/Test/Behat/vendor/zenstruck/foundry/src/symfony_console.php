@@ -1,1 +1,0 @@
-/home/niko/works/github.com/zenstruck/foundry/src/symfony_console.php

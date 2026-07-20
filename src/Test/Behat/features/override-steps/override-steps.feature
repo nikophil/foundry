@@ -25,3 +25,8 @@ Feature: Overriding built-in step definitions
     Given create a contact called "john"
     When I am on "/[lastId(contact)]"
     Then the response status code should be 404
+
+  Scenario: A disabled built-in step frees its wording for the user's own definition (!)
+    Given create a contact called "john"
+    Then 1 "contact" should exist
+    Then a "LogicException" exception should be thrown containing message "custom step called"
