@@ -6,6 +6,17 @@ use Zenstruck\Foundry\Tests\Fixture\TestKernel;
 
 require_once __DIR__ . '/../tests/bootstrap.php';
 
+foreach ($_SERVER['argv'] as $arg) {
+    if ('--' === $arg) {
+        break;
+    }
+
+    if ('--env' === $arg || str_starts_with($arg, '--env=') || preg_match('/^-e/', $arg)) {
+        fwrite(STDERR, "This console always runs in the \"test\" environment: the --env/-e option is not supported.\n");
+        exit(1);
+    }
+}
+
 $application = new Application(new TestKernel('test', true));
 
 $application->run();

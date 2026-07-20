@@ -121,8 +121,8 @@ abstract class Story
 
         $this->state[$name] = $value;
 
-        if (\is_object($value) && Configuration::instance()->hasEventDispatcher()) {
-            Configuration::instance()->eventDispatcher()->dispatch(new StateAddedToStory($value, $name));
+        if (\is_object($value) && Configuration::isBooted() && ($configuration = Configuration::instance())->hasEventDispatcher()) {
+            $configuration->eventDispatcher()->dispatch(new StateAddedToStory($value, $name));
         }
 
         if ($pool) {

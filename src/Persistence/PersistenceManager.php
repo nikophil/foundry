@@ -33,7 +33,7 @@ use Zenstruck\Foundry\Persistence\ResetDatabase\ResetDatabaseManager;
  *
  * @final not final only to be mockable in tests
  */
-class PersistenceManager
+final class PersistenceManager implements IdentifierResolver
 {
     private bool $flush = true;
     private bool $persist = true;

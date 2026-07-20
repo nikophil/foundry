@@ -40,10 +40,10 @@ final class FixtureStoryResolver
         }
 
         if ($this->hasGroup($fixtureOrGroupName)) {
-            return $this->resolveGroup($fixtureOrGroupName);
+            return $this->groupedStories[$fixtureOrGroupName];
         }
 
-        throw FixtureStoryNotFound::forNameOrGroup($fixtureOrGroupName, [...$this->availableFixtureNames(), ...$this->availableGroupNames()]);
+        throw FixtureStoryNotFound::forNameOrGroup($fixtureOrGroupName, $this->availableFixtureNames(), $this->availableGroupNames());
     }
 
     public function hasAnyFixtures(): bool
@@ -75,20 +75,6 @@ final class FixtureStoryResolver
     public function availableGroupNames(): array
     {
         return \array_keys($this->groupedStories);
-    }
-
-    /**
-     * @return array<string, class-string<Story>>
-     *
-     * @throws FixtureStoryNotFound
-     */
-    private function resolveGroup(string $groupName): array
-    {
-        if (!isset($this->groupedStories[$groupName])) {
-            throw FixtureStoryNotFound::forGroup($groupName, $this->availableGroupNames());
-        }
-
-        return $this->groupedStories[$groupName];
     }
 
     private function hasGroup(string $name): bool

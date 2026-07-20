@@ -11,19 +11,22 @@
 
 namespace Zenstruck\Foundry\Test\Behat\Exception;
 
+/**
+ * @internal
+ */
 final class DamaNativeExtensionIncompatibility extends \LogicException
 {
     public static function withManualResetDbMode(): self
     {
         return new self(
-            'Database reset mode "manual" is not supported the native Behat extension for "dama/doctrine-test-bundle" is enabled. Please enable Foundry\'s DAMA support with "enable_dama_support: true" and disable the native extension to enable manual database reset with DAMA support.'
+            'Database reset mode "manual" is not supported when the native Behat extension for "dama/doctrine-test-bundle" is enabled. Please enable Foundry\'s DAMA support with "enable_dama_support: true" and disable the native extension to enable manual database reset with DAMA support.'
         );
     }
 
     public static function withFeatureResetDbMode(): self
     {
         return new self(
-            'Database reset mode "feature" is not supported the native Behat extension for "dama/doctrine-test-bundle" is enabled. Please enable Foundry\'s DAMA support with "enable_dama_support: true" and disable the native extension to enable automatic database reset at feature level with DAMA support.'
+            'Database reset mode "feature" is not supported when the native Behat extension for "dama/doctrine-test-bundle" is enabled. Please enable Foundry\'s DAMA support with "enable_dama_support: true" and disable the native extension to enable automatic database reset at feature level with DAMA support.'
         );
     }
 

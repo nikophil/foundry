@@ -27,14 +27,9 @@ use Zenstruck\Foundry\Test\Behat\Exception\ObjectNotFound;
  */
 final class FoundryCallFilter implements CallFilter
 {
-    private readonly FactoryShortNameResolver $factoryResolver;
-    private readonly ObjectRegistry $objectRegistry;
-
     public function __construct(
-        KernelInterface $symfonyKernel,
+        private readonly KernelInterface $symfonyKernel,
     ) {
-        $this->factoryResolver = $symfonyKernel->getContainer()->get('.zenstruck_foundry.behat.factory_resolver'); // @phpstan-ignore assign.propertyType
-        $this->objectRegistry = $symfonyKernel->getContainer()->get('.zenstruck_foundry.behat.object_registry'); // @phpstan-ignore assign.propertyType
     }
 
     public function supportsCall(Call $call): bool
@@ -47,20 +42,25 @@ final class FoundryCallFilter implements CallFilter
 
     public function filterCall(Call $call): Call
     {
-        if (
-            !$call instanceof DefinitionCall
-            || !$call->getCallee()->getReflection() instanceof \ReflectionMethod
-            || FoundryContext::class !== $call->getCallee()->getReflection()->class
-        ) {
+        if (!$call instanceof DefinitionCall) {
+            return $call;
+        }
+
+        $reflection = $call->getCallee()->getReflection();
+
+        if (!$reflection instanceof \ReflectionMethod || FoundryContext::class !== $reflection->class) {
             return $call;
         }
 
         $arguments = $call->getArguments();
+        $factoryShortName = $this->resolveFactoryShortNameArgument($reflection, $arguments);
 
-        if (!isset($arguments['factoryShortName'])) {
+        if (null === $factoryShortName) {
             throw new \InvalidArgumentException(<<<ERROR
                 Cannot filter call without a "\$factoryShortName" argument.
-                This must be the name of the argument in the #[Given], #[When], #[Then] definitions."
+                This must be the name of the argument in the #[Given], #[When], #[Then] definitions.
+                When overriding a step with a custom regex pattern, use a named capture group ((?P<factoryShortName>...)),
+                or anonymous capture groups appearing in the same order as the method parameters.
                 ERROR);
         }
 
@@ -71,7 +71,7 @@ final class FoundryCallFilter implements CallFilter
             $call->getCallee(),
             \array_map(
                 fn(mixed $argument) => match ($argument instanceof TableNode) {
-                    true => $this->normalizeObjectParameters($argument, $arguments['factoryShortName']),
+                    true => $this->normalizeObjectParameters($argument, $factoryShortName),
                     false => $argument,
                 },
                 $arguments
@@ -80,28 +80,39 @@ final class FoundryCallFilter implements CallFilter
         );
     }
 
+    /**
+     * Named capture groups produce arguments keyed by parameter name, anonymous ones (e.g. from
+     * a re-worded regex pattern) produce arguments keyed by parameter position.
+     *
+     * @param array<array-key, mixed> $arguments
+     */
+    private function resolveFactoryShortNameArgument(\ReflectionMethod $method, array $arguments): ?string
+    {
+        $argument = $arguments['factoryShortName']
+            ?? $arguments[array_find_key(
+                $method->getParameters(),
+                static fn(\ReflectionParameter $parameter) => 'factoryShortName' === $parameter->getName()
+            ) ?? -1]
+            ?? null;
+
+        return \is_string($argument) ? $argument : null;
+    }
+
     private function normalizeObjectParameters(TableNode $tableNode, string $factoryShortName): TableNode
     {
         $table = $tableNode->getTable();
 
-        $headKey = \array_key_first($table);
-        $thead = \array_shift($table) ?? throw new \LogicException('Table has no header row.');
+        $headKey = \array_key_first($table) ?? throw new \LogicException('Table has no header row.');
+        $thead = $table[$headKey];
+        unset($table[$headKey]);
 
         return FoundryTableNode::create(
-            $this->factoryResolver,
-            $this->objectRegistry,
-            \Closure::bind(
-                fn() => $this->maxLineLength,
-                $tableNode,
-                TableNode::class
-            )(),
-            [ // @phpstan-ignore argument.type (TableNode has the same problem: array $table is not really lists)
-                $headKey => $thead, // @phpstan-ignore array.invalidKey
-                ...\array_map(
-                    fn(array $parameters) => $this->normalizeTableRow($parameters, $thead, $factoryShortName),
-                    $table
-                ),
-            ]
+            $this->factoryResolver(),
+            $this->objectRegistry(),
+            [$headKey => $thead] + \array_map(
+                fn(array $parameters) => $this->normalizeTableRow($parameters, $thead, $factoryShortName),
+                $table
+            )
         );
     }
 
@@ -127,6 +138,8 @@ final class FoundryCallFilter implements CallFilter
                 continue;
             }
 
+            $value = $this->objectRegistry()->resolveIdPlaceholders($value);
+
             $normalized[$propertyName] = match (true) {
                 'null' === $value => null,
                 'true' === $value => true,
@@ -146,7 +159,7 @@ final class FoundryCallFilter implements CallFilter
         }
 
         try {
-            return $this->objectRegistry->getByFactoryShortName($matches['factoryShortName'], $matches['objectName']);
+            return $this->objectRegistry()->getByFactoryShortName($matches['factoryShortName'], $matches['objectName']);
         } catch (ObjectNotFound $e) {
             throw InvalidObjectParameter::objectReferencedInTableDoesNotExist($propertyName, $e);
         }
@@ -154,16 +167,16 @@ final class FoundryCallFilter implements CallFilter
 
     private function resolveObjectReferenceBasedOnPropertyType(string $propertyName, string $value, string $factoryShortName): mixed
     {
-        $targetClass = $this->factoryResolver->targetObjectClassFor($factoryShortName);
+        $targetClass = $this->factoryResolver()->targetObjectClassFor($factoryShortName);
         $expectedTypeClass = $this->getPropertyTypeIfClass(new \ReflectionClass($targetClass), $propertyName);
 
         if (!$expectedTypeClass) {
             return $value;
         }
 
-        if ($this->factoryResolver->hasFactoryForClass($expectedTypeClass)) {
+        if ($this->factoryResolver()->hasFactoryForClass($expectedTypeClass)) {
             try {
-                return $this->objectRegistry->getByObjectClass($expectedTypeClass, $value);
+                return $this->objectRegistry()->getByObjectClass($expectedTypeClass, $value);
             } catch (ObjectNotFound $e) {
                 throw InvalidObjectParameter::objectReferencedInTableDoesNotExist($propertyName, $e);
             }
@@ -211,5 +224,15 @@ final class FoundryCallFilter implements CallFilter
         }
 
         return $type->getName();
+    }
+
+    private function factoryResolver(): FactoryShortNameResolver
+    {
+        return $this->symfonyKernel->getContainer()->get('.zenstruck_foundry.behat.factory_resolver'); // @phpstan-ignore return.type
+    }
+
+    private function objectRegistry(): ObjectRegistry
+    {
+        return $this->symfonyKernel->getContainer()->get('.zenstruck_foundry.behat.object_registry'); // @phpstan-ignore return.type
     }
 }

@@ -25,7 +25,7 @@ use PHPUnit\Framework\TestCase;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpKernel\KernelInterface;
 use Zenstruck\Foundry\ObjectFactory;
-use Zenstruck\Foundry\Persistence\PersistenceManager;
+use Zenstruck\Foundry\Persistence\IdentifierResolver;
 use Zenstruck\Foundry\Test\Behat\Attribute\FactoryShortName;
 use Zenstruck\Foundry\Test\Behat\Exception\InvalidObjectParameter;
 use Zenstruck\Foundry\Test\Behat\FactoryShortNameResolver;
@@ -50,7 +50,7 @@ final class FoundryCallFilterTest extends TestCase
             new ChildEntityFactory(),
         ]);
         $this->objectRegistry = new ObjectRegistry(
-            $this->factoryResolver, $this->createStub(PersistenceManager::class)
+            $this->factoryResolver, $this->createStub(IdentifierResolver::class)
         );
         $this->objectRegistry->reset();
 

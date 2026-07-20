@@ -13,7 +13,6 @@ namespace Zenstruck\Foundry\Command;
 
 use DAMA\DoctrineTestBundle\Doctrine\DBAL\StaticDriver;
 use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Exception\InvalidArgumentException;
 use Symfony\Component\Console\Exception\LogicException;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -69,10 +68,6 @@ final class LoadFixturesCommand extends Command
         $fixtureNameOrGroup = $input->getArgument('name') ?? $this->getNameWhenNotProvided($io);
 
         $stories = $this->fixtureStoryResolver->resolve($fixtureNameOrGroup);
-
-        if (!$stories) {
-            throw new InvalidArgumentException("Story with name or group \"{$fixtureNameOrGroup}\" does not exist.");
-        }
 
         if ($this->fixtureStoryResolver->hasFixture($fixtureNameOrGroup)) {
             $io->comment("Loading story with name \"{$fixtureNameOrGroup}\"...");

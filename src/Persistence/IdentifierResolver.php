@@ -9,21 +9,15 @@
  * file that was distributed with this source code.
  */
 
-namespace Zenstruck\Foundry\Story\Event;
+namespace Zenstruck\Foundry\Persistence;
 
 /**
  * @internal
- *
- * @template-covariant T of object
  */
-final class StateAddedToStory
+interface IdentifierResolver
 {
     /**
-     * @param T $object
+     * @return array<string, mixed>
      */
-    public function __construct(
-        public readonly object $object,
-        public readonly string $name,
-    ) {
-    }
+    public function getIdentifierValues(object $object): array;
 }

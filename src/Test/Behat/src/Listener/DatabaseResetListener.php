@@ -23,7 +23,6 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpKernel\KernelInterface;
 use Zenstruck\Foundry\Configuration;
 use Zenstruck\Foundry\Persistence\ResetDatabase\ResetDatabaseManager;
-use Zenstruck\Foundry\StoryRegistry;
 use Zenstruck\Foundry\Test\Behat\DatabaseResetMode;
 use Zenstruck\Foundry\Test\Behat\Exception\DamaNativeExtensionIncompatibility;
 use Zenstruck\Foundry\Test\Behat\Exception\InvalidResetDbTag;
@@ -52,22 +51,24 @@ final class DatabaseResetListener implements EventSubscriberInterface
             ExerciseCompleted::BEFORE => ['resetBeforeSuite', -10], // -10 because it should occur after Dama
             ExerciseCompleted::AFTER => 'disableStaticConnection',
 
+            // priorities: validation must run first, then the conditional shutdown must run
+            // BEFORE BootConfigurationListener::bootFoundry (priority 100) so that the scenario
+            // starts with a freshly booted Foundry, and the database reset itself runs last
             FeatureTested::BEFORE => [
-                ['validateFeature', 10],
+                ['validateFeature', 200],
+                ['shutdownFoundryIfDatabaseWillReset', 150],
                 ['resetDatabaseIfNeeded'],
             ],
             ScenarioTested::BEFORE => [
-                ['validateScenario', 10],
+                ['validateScenario', 200],
+                ['shutdownFoundryIfDatabaseWillReset', 150],
                 ['resetDatabaseIfNeeded'],
             ],
             ExampleTested::BEFORE => [
-                ['validateScenario', 10],
+                ['validateScenario', 200],
+                ['shutdownFoundryIfDatabaseWillReset', 150],
                 ['resetDatabaseIfNeeded'],
             ],
-
-            // a shutdown is needed after each scenario to ensure StoriesRegistry is reset
-            ScenarioTested::AFTER => 'shutdownFoundryAfterScenario',
-            ExampleTested::AFTER => 'shutdownFoundryAfterScenario',
         ];
     }
 
@@ -93,6 +94,8 @@ final class DatabaseResetListener implements EventSubscriberInterface
 
     public function validateFeature(BeforeFeatureTested $event): void
     {
+        $this->validateTags($event);
+
         if ($this->hasResetDbTag($event) && DatabaseResetMode::FEATURE === $this->resetMode) {
             throw InvalidResetDbTag::resetDbOnFeatureWithFeatureMode($event);
         }
@@ -100,13 +103,23 @@ final class DatabaseResetListener implements EventSubscriberInterface
 
     public function validateScenario(BeforeScenarioTested $event): void
     {
-        if ($this->hasResetDbTag($event) && DatabaseResetMode::SCENARIO === $this->resetMode) {
-            throw InvalidResetDbTag::resetDbOnScenarioWithScenarioMode($event);
+        $this->validateTags($event);
+    }
+
+    /**
+     * Shutting down Foundry resets the story registry (so stories can reload in the fresh
+     * database), the persisted objects tracker and the faker. It must happen before the
+     * database reset of the coming scenario/feature, and never for a @noResetDB scenario:
+     * its named references and loaded stories must survive.
+     */
+    public function shutdownFoundryIfDatabaseWillReset(BeforeFeatureTested|BeforeScenarioTested $event): void
+    {
+        if (!$this->shouldResetDB($event)) {
+            return;
         }
 
-        if ($this->hasResetDbTag($event) && $this->hasNoResetDbTag($event)) {
-            throw InvalidResetDbTag::bothTagsUsed($event);
-        }
+        $this->resetObjectRegistry();
+        Configuration::shutdown();
     }
 
     public function resetDatabaseIfNeeded(BeforeFeatureTested|BeforeScenarioTested $event): void
@@ -114,11 +127,6 @@ final class DatabaseResetListener implements EventSubscriberInterface
         if (!$this->shouldResetDB($event)) {
             return;
         }
-
-        $this->resetObjectRegistry();
-
-        // when the DB is reset, any stories should be able to reload
-        StoryRegistry::reset();
 
         if (!ResetDatabaseManager::databaseHasBeenResetBeforeFirstTest()) {
             ResetDatabaseManager::resetBeforeFirstTest($this->symfonyKernel);
@@ -134,14 +142,32 @@ final class DatabaseResetListener implements EventSubscriberInterface
         ResetDatabaseManager::resetBeforeEachTest($this->symfonyKernel);
     }
 
-    public function shutdownFoundryAfterScenario(): void
+    private function validateTags(BeforeFeatureTested|BeforeScenarioTested $event): void
     {
-        if (DatabaseResetMode::SCENARIO !== $this->resetMode) {
+        $hasResetDbTag = $this->hasResetDbTag($event);
+        $hasNoResetDbTag = $this->hasNoResetDbTag($event);
+
+        if ($hasResetDbTag && $hasNoResetDbTag) {
+            throw InvalidResetDbTag::bothTagsUsed($event);
+        }
+
+        if ($hasResetDbTag && DatabaseResetMode::SCENARIO === $this->resetMode) {
+            throw InvalidResetDbTag::resetDbWithScenarioMode($event);
+        }
+
+        if (!$hasNoResetDbTag) {
             return;
         }
 
-        $this->resetObjectRegistry();
-        Configuration::shutdown();
+        if ($this->damaNativeExtensionIsEnabled) {
+            throw DamaNativeExtensionIncompatibility::withNoResetDbTag();
+        }
+
+        match ($this->resetMode) {
+            DatabaseResetMode::MANUAL => throw InvalidResetDbTag::noResetDbWithManualMode($event),
+            DatabaseResetMode::FEATURE => throw InvalidResetDbTag::noResetDbWithFeatureMode($event),
+            default => null,
+        };
     }
 
     private function shouldResetDB(BeforeFeatureTested|BeforeScenarioTested $event): bool
@@ -160,48 +186,27 @@ final class DatabaseResetListener implements EventSubscriberInterface
 
     private function hasResetDbTag(BeforeFeatureTested|BeforeScenarioTested $event): bool
     {
-        $node = $event instanceof BeforeFeatureTested ? $event->getFeature() : $event->getScenario();
-
-        if (!$node instanceof TaggedNodeInterface) {
-            return false;
-        }
-
-        $hasResetDbTag = $node->hasTag(self::RESET_DB_TAG);
-
-        if (!$hasResetDbTag) {
-            return false;
-        }
-
-        if (DatabaseResetMode::SCENARIO === $this->resetMode) {
-            throw InvalidResetDbTag::resetDbWithScenarioMode($event);
-        }
-
-        return true;
+        return $this->hasTag($event, self::RESET_DB_TAG);
     }
 
+    /**
+     * Unlike @resetDB (whose feature-level and scenario-level meanings differ), a feature-level
+     * @noResetDB is inherited by every scenario of the feature.
+     */
     private function hasNoResetDbTag(BeforeFeatureTested|BeforeScenarioTested $event): bool
+    {
+        if ($this->hasTag($event, self::NO_RESET_DB_TAG)) {
+            return true;
+        }
+
+        return $event instanceof BeforeScenarioTested && $event->getFeature()->hasTag(self::NO_RESET_DB_TAG);
+    }
+
+    private function hasTag(BeforeFeatureTested|BeforeScenarioTested $event, string $tag): bool
     {
         $node = $event instanceof BeforeFeatureTested ? $event->getFeature() : $event->getScenario();
 
-        if (!$node instanceof TaggedNodeInterface) {
-            return false;
-        }
-
-        $hasNoResetDbTag = $node->hasTag(self::NO_RESET_DB_TAG);
-
-        if (!$hasNoResetDbTag) {
-            return false;
-        }
-
-        if ($this->damaNativeExtensionIsEnabled) {
-            throw DamaNativeExtensionIncompatibility::withNoResetDbTag();
-        }
-
-        return match ($this->resetMode) {
-            DatabaseResetMode::MANUAL => throw InvalidResetDbTag::noResetDbWithManualMode($event),
-            DatabaseResetMode::FEATURE => throw InvalidResetDbTag::noResetDbWithFeatureMode($event),
-            default => true,
-        };
+        return $node instanceof TaggedNodeInterface && $node->hasTag($tag);
     }
 
     private function resetObjectRegistry(): void

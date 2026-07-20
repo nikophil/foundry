@@ -40,8 +40,10 @@ final class NoPersistenceObjectsAutoCompleter
                     continue;
                 }
 
-                if (\str_contains($phpFile->getRealPath(), 'var/cache')
-                    || \str_contains($phpFile->getRealPath(), 'src/Test/Behat')) {
+                $normalizedPath = \str_replace('\\', '/', $phpFile->getRealPath());
+
+                if (\str_contains($normalizedPath, 'var/cache')
+                    || \str_contains($normalizedPath, 'src/Test/Behat')) {
                     continue;
                 }
 

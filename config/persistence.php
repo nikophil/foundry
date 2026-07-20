@@ -48,7 +48,6 @@ return static function(ContainerConfigurator $container): void {
             abstract_arg('fixtureStories'),
             abstract_arg('groupedStories'),
         ])
-        ->public()
     ;
 
     if (\PHP_VERSION_ID >= 80400) {

@@ -20,6 +20,7 @@ use Behat\Testwork\Suite\GenericSuite;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
+use Zenstruck\Foundry\Configuration;
 use Zenstruck\Foundry\Test\Behat\DatabaseResetMode;
 use Zenstruck\Foundry\Test\Behat\Exception\DamaNativeExtensionIncompatibility;
 use Zenstruck\Foundry\Test\Behat\Exception\InvalidResetDbTag;
@@ -76,8 +77,10 @@ final class DatabaseResetListenerTest extends KernelTestCase
         array $tags,
         string $exceptionClass,
         string $exceptionMessage,
+        bool $damaSupportEnabled = false,
+        bool $damaNativeExtensionIsEnabled = false,
     ): void {
-        $listener = $this->createListener($mode);
+        $listener = $this->createListener($mode, $damaSupportEnabled, $damaNativeExtensionIsEnabled);
         $event = $this->createScenarioEvent($tags);
 
         $this->expectException($exceptionClass);
@@ -99,7 +102,30 @@ final class DatabaseResetListenerTest extends KernelTestCase
             DatabaseResetMode::MANUAL,
             ['resetDB', 'noResetDB'],
             InvalidResetDbTag::class,
+            'Cannot use both "@resetDB" and "@noResetDB" tags at the same time.',
+        ];
+
+        yield 'noResetDB tag with dama native extension' => [
+            DatabaseResetMode::SCENARIO,
+            ['noResetDB'],
+            DamaNativeExtensionIncompatibility::class,
+            'Cannot use "@noResetDB" with native Behat extension for "dama/doctrine-test-bundle".',
+            false,
+            true,
+        ];
+
+        yield 'noResetDB tag with manual mode' => [
+            DatabaseResetMode::MANUAL,
+            ['noResetDB'],
+            InvalidResetDbTag::class,
             'Cannot use "@noResetDB" tag with database_reset_mode set as "manual".',
+        ];
+
+        yield 'noResetDB tag with feature mode' => [
+            DatabaseResetMode::FEATURE,
+            ['noResetDB'],
+            InvalidResetDbTag::class,
+            'Cannot use "@noResetDB" tag with database_reset_mode set as "feature".',
         ];
     }
 
@@ -125,6 +151,10 @@ final class DatabaseResetListenerTest extends KernelTestCase
 
         $event = 'feature' === $eventType ? $this->createFeatureEvent($tags) : $this->createScenarioEvent($tags);
 
+        // mimic the real event chain: conditional shutdown (prio 150), then
+        // BootConfigurationListener::bootFoundry (prio 100), then the database reset (prio 0)
+        $listener->shutdownFoundryIfDatabaseWillReset($event);
+        $this->rebootFoundry();
         $listener->resetDatabaseIfNeeded($event);
 
         if ($shouldReset) {
@@ -185,55 +215,6 @@ final class DatabaseResetListenerTest extends KernelTestCase
             'scenario',
             [],
             false,
-        ];
-    }
-
-    /**
-     * @param list<string>             $tags
-     * @param class-string<\Throwable> $exceptionClass
-     */
-    #[Test]
-    #[DataProvider('resetDatabaseIfNeededExceptionProvider')]
-    public function it_throws_exception_on_reset_database_if_needed(
-        DatabaseResetMode $mode,
-        array $tags,
-        string $exceptionClass,
-        string $exceptionMessage,
-        bool $damaSupportEnabled = false,
-        bool $damaNativeExtensionIsEnabled = false,
-    ): void {
-        $listener = $this->createListener($mode, $damaSupportEnabled, $damaNativeExtensionIsEnabled);
-        $event = $this->createScenarioEvent($tags);
-
-        $this->expectException($exceptionClass);
-        $this->expectExceptionMessage($exceptionMessage);
-
-        $listener->resetDatabaseIfNeeded($event);
-    }
-
-    public static function resetDatabaseIfNeededExceptionProvider(): iterable
-    {
-        yield 'noResetDB tag with dama native extension' => [
-            DatabaseResetMode::SCENARIO,
-            ['noResetDB'],
-            DamaNativeExtensionIncompatibility::class,
-            'Cannot use "@noResetDB" with native Behat extension for "dama/doctrine-test-bundle".',
-            false,
-            true,
-        ];
-
-        yield 'noResetDB tag with manual mode' => [
-            DatabaseResetMode::MANUAL,
-            ['noResetDB'],
-            InvalidResetDbTag::class,
-            'Cannot use "@noResetDB" tag with database_reset_mode set as "manual".',
-        ];
-
-        yield 'noResetDB tag with feature mode' => [
-            DatabaseResetMode::FEATURE,
-            ['noResetDB'],
-            InvalidResetDbTag::class,
-            'Cannot use "@noResetDB" with database_reset_mode set as "feature".',
         ];
     }
 
@@ -300,6 +281,13 @@ final class DatabaseResetListenerTest extends KernelTestCase
     private function objectRegistry(): ObjectRegistry
     {
         return self::getContainer()->get('.zenstruck_foundry.behat.object_registry'); // @phpstan-ignore return.type
+    }
+
+    private function rebootFoundry(): void
+    {
+        if (!Configuration::isBooted()) {
+            Configuration::boot(fn() => self::getContainer()->get('.zenstruck_foundry.configuration')); // @phpstan-ignore argument.type
+        }
     }
 
     private function createEnvironment(): StaticEnvironment

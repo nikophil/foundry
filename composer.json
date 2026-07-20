@@ -70,6 +70,7 @@
     "autoload-dev": {
         "psr-4": {
             "Zenstruck\\Foundry\\Tests\\": ["tests/"],
+            "Zenstruck\\Foundry\\Test\\Behat\\": "src/Test/Behat/src/",
             "App\\": "tests/Fixture/Maker/tmp/src",
             "App\\Tests\\": "tests/Fixture/Maker/tmp/tests",
             "Zenstruck\\Foundry\\Utils\\Rector\\Tests\\": "utils/rector/tests/"

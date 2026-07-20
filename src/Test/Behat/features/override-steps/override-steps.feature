@@ -15,6 +15,12 @@ Feature: Overriding built-in step definitions
       | name     |
       | John Doe |
 
+  Scenario: Re-worded table step with an anonymous regex capture group
+    Given a contact exists with:
+      | name     |
+      | John Doe |
+    Then 1 contact should exist
+
   Scenario: Re-worded id transform (#[Transform] patterns can be overridden too)
     Given create a contact called "john"
     When I am on "/[lastId]"

@@ -30,8 +30,8 @@ final class FactoryShortNameResolver
      */
     private array $factoryMap = [];
 
-    /** @var array<class-string, string> */
-    private array $classToShortName = [];
+    /** @var array<class-string, list<string>> */
+    private array $classToShortNames = [];
 
     /**
      * @param iterable<Factory<mixed>> $factories
@@ -57,7 +57,9 @@ final class FactoryShortNameResolver
             $this->factoryMap[$plural] ??= [];
             $this->factoryMap[$plural][] = $factory;
 
-            $this->classToShortName[$factory::class()] = $shortName;
+            if (!\in_array($shortName, $this->classToShortNames[$factory::class()] ?? [], true)) {
+                $this->classToShortNames[$factory::class()][] = $shortName;
+            }
         }
     }
 
@@ -96,15 +98,18 @@ final class FactoryShortNameResolver
      */
     public function hasFactoryForClass(string $className): bool
     {
-        return isset($this->classToShortName[$className]);
+        return isset($this->classToShortNames[$className]);
     }
 
     /**
+     * Only meant for display purposes: when several factories with different short names
+     * target the same class, the first registered one is used.
+     *
      * @param class-string $className
      */
     public function getShortNameForClass(string $className): string
     {
-        return $this->classToShortName[$className] ?? throw new \LogicException("No factory found for class \"{$className}\".");
+        return $this->classToShortNames[$className][0] ?? throw new \LogicException("No factory found for class \"{$className}\".");
     }
 
     /**

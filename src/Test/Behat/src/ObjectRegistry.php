@@ -13,7 +13,8 @@ namespace Zenstruck\Foundry\Test\Behat;
 
 use Symfony\Component\Uid\AbstractUid;
 use Zenstruck\Foundry\Persistence\Event\AfterPersist;
-use Zenstruck\Foundry\Persistence\PersistenceManager;
+use Zenstruck\Foundry\Persistence\IdentifierResolver;
+use Zenstruck\Foundry\Persistence\ProxyGenerator;
 use Zenstruck\Foundry\Story\Event\StateAddedToStory;
 use Zenstruck\Foundry\Test\Behat\Exception\ObjectAlreadyRegistered;
 use Zenstruck\Foundry\Test\Behat\Exception\ObjectNotFound;
@@ -34,9 +35,12 @@ final class ObjectRegistry
     /** @var array<string, mixed> */
     private static array $lastId = [];
 
+    /** @var array<class-string, array<string, mixed>> */
+    private static array $lastIdByClass = [];
+
     public function __construct(
         private readonly FactoryShortNameResolver $factoryShortNameResolver,
-        private readonly PersistenceManager $persistenceManager,
+        private readonly IdentifierResolver $persistenceManager,
     ) {
     }
 
@@ -50,6 +54,11 @@ final class ObjectRegistry
 
     public function store(object $object, string $objectName): void
     {
+        // story states may carry a legacy Foundry proxy: index by the real class,
+        // like every read path (targetObjectClassFor()) does
+        $object = ProxyGenerator::unwrap($object, withAutoRefresh: false);
+        \assert(\is_object($object));
+
         if ($this->has($object::class, $objectName)) {
             throw ObjectAlreadyRegistered::forClassAndName($object::class, $objectName);
         }
@@ -71,6 +80,7 @@ final class ObjectRegistry
     public function storeLastId(AfterPersist $event): void
     {
         self::$lastId = $this->persistenceManager->getIdentifierValues($event->object);
+        self::$lastIdByClass[$event->object::class] = self::$lastId;
     }
 
     public function getByFactoryShortName(string $factoryShortName, string $objectName): object
@@ -102,6 +112,7 @@ final class ObjectRegistry
     {
         self::$objects = [];
         self::$lastId = [];
+        self::$lastIdByClass = [];
     }
 
     public function lastId(): int|string
@@ -115,26 +126,47 @@ final class ObjectRegistry
 
     public function lastIdFor(string $factoryShortName): int|string
     {
-        $objects = self::$objects[$this->factoryShortNameResolver->targetObjectClassFor($factoryShortName)] ?? [];
-
-        if (0 === \count($objects)) {
-            throw new \InvalidArgumentException("No object of type \"{$factoryShortName}\" found.");
-        }
+        $objectClass = $this->factoryShortNameResolver->targetObjectClassFor($factoryShortName);
 
         return $this->coerceIdToScalar(
-            $this->persistenceManager->getIdentifierValues(
-                array_last($objects)
-            )
+            self::$lastIdByClass[$objectClass]
+                ?? throw new \InvalidArgumentException("No object of type \"{$factoryShortName}\" has been created by Foundry yet.")
         );
     }
 
     public function idFor(string $factoryShortName, string $objectName): int|string
     {
-        $object = $this->getByFactoryShortName($factoryShortName, $objectName);
+        // unwrap() also initializes uninitialized lazy ghosts (e.g. reset by the
+        // PersistedObjectsTracker), whose identifiers read as null through raw reflection
+        $object = ProxyGenerator::unwrap($this->getByFactoryShortName($factoryShortName, $objectName));
+        \assert(\is_object($object));
 
         return $this->coerceIdToScalar(
             $this->persistenceManager->getIdentifierValues($object)
         );
+    }
+
+    /**
+     * Replaces every <lastId>, <lastId(factory)> and <id(factory, name)> placeholder in the given string.
+     */
+    public function resolveIdPlaceholders(string $value): string
+    {
+        $resolved = \preg_replace_callback(
+            '/<(?:lastId(?:\(\s*(?<lastIdFactory>[^)]+?)\s*\))?|id\(\s*(?<factory>[^,)]+?)\s*,\s*(?<name>[^)]+?)\s*\))>/',
+            fn(array $matches): string => (string) match (true) {
+                '' !== ($matches['name'] ?? '') => $this->idFor(self::unquote($matches['factory']), self::unquote($matches['name'])),
+                // @phpstan-ignore nullCoalesce.offset (a plain <lastId> match yields no named group at runtime)
+                '' !== ($matches['lastIdFactory'] ?? '') => $this->lastIdFor(self::unquote($matches['lastIdFactory'])),
+                default => $this->lastId(),
+            },
+            $value
+        ) ?? $value;
+
+        if (\preg_match('/<(?:lastId|id)\([^)]*\)>/', $resolved, $matches)) {
+            throw new \InvalidArgumentException("Malformed id placeholder \"{$matches[0]}\": expected <lastId>, <lastId(factory)> or <id(factory, name)>.");
+        }
+
+        return $resolved;
     }
 
     public function isStored(object $object): bool
@@ -153,13 +185,18 @@ final class ObjectRegistry
         ) ?? throw new \LogicException('Object is not stored in the registry.');
     }
 
+    private static function unquote(string $value): string
+    {
+        return \trim($value, '"');
+    }
+
     /**
      * @param array<string, mixed> $ids
      */
     private function coerceIdToScalar(array $ids): int|string
     {
         if (1 !== \count($ids)) {
-            throw new \InvalidArgumentException('Cannot get last id: generic entity must have exactly one identifier.');
+            throw new \InvalidArgumentException(\sprintf('Cannot resolve the id: the entity must have exactly one identifier value, got %d ("%s").', \count($ids), \implode('", "', \array_keys($ids))));
         }
 
         $id = array_first($ids);

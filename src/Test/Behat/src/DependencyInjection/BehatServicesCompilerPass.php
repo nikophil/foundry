@@ -31,5 +31,8 @@ final class BehatServicesCompilerPass implements CompilerPassInterface
 
         $loader = new PhpFileLoader($container, new FileLocator(\dirname(__DIR__, 2).'/config'));
         $loader->load('behat.php');
+
+        // accessed at runtime by LoadFixturesListener through the kernel's container
+        $container->findDefinition('.zenstruck_foundry.story.fixture_resolver')->setPublic(true);
     }
 }

@@ -14,6 +14,9 @@ namespace Zenstruck\Foundry\Test\Behat\Exception;
 use Behat\Behat\EventDispatcher\Event\BeforeFeatureTested;
 use Behat\Behat\EventDispatcher\Event\BeforeScenarioTested;
 
+/**
+ * @internal
+ */
 final class InvalidResetDbTag extends \LogicException
 {
     public function __construct(string $message, BeforeFeatureTested|BeforeScenarioTested $event)
@@ -48,7 +51,7 @@ final class InvalidResetDbTag extends \LogicException
         parent::__construct("{$message}\nAt {$errorFileAndLine}");
     }
 
-    public static function bothTagsUsed(BeforeScenarioTested $event): self
+    public static function bothTagsUsed(BeforeFeatureTested|BeforeScenarioTested $event): self
     {
         return new self('Cannot use both "@resetDB" and "@noResetDB" tags at the same time.', $event);
     }
@@ -63,11 +66,6 @@ final class InvalidResetDbTag extends \LogicException
         return new self('Cannot use "@resetDB" tag on a feature with database_reset_mode set as "feature".', $event);
     }
 
-    public static function resetDbOnScenarioWithScenarioMode(BeforeScenarioTested $event): self
-    {
-        return new self('Cannot use "@resetDB" tag on a scenario with database_reset_mode set as "scenario".', $event);
-    }
-
     public static function noResetDbWithManualMode(BeforeFeatureTested|BeforeScenarioTested $event): self
     {
         return new self('Cannot use "@noResetDB" tag with database_reset_mode set as "manual".', $event);
@@ -75,6 +73,6 @@ final class InvalidResetDbTag extends \LogicException
 
     public static function noResetDbWithFeatureMode(BeforeFeatureTested|BeforeScenarioTested $event): self
     {
-        return new self('Cannot use "@noResetDB" with database_reset_mode set as "feature".', $event);
+        return new self('Cannot use "@noResetDB" tag with database_reset_mode set as "feature".', $event);
     }
 }

@@ -16,6 +16,7 @@ use Behat\Testwork\Call\ServiceContainer\CallExtension;
 use Behat\Testwork\ServiceContainer\Extension;
 use Behat\Testwork\ServiceContainer\ExtensionManager;
 use DAMA\DoctrineTestBundle\Behat\ServiceContainer\DoctrineExtension;
+use DAMA\DoctrineTestBundle\Doctrine\DBAL\StaticDriver;
 use Symfony\Component\Config\Definition\Builder\ArrayNodeDefinition;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Reference;
@@ -102,6 +103,10 @@ final class FoundryExtension implements Extension
 
         if (DatabaseResetMode::DISABLED === $databaseResetMode) {
             return;
+        }
+
+        if ($config['enable_dama_support'] && !\class_exists(StaticDriver::class)) {
+            throw new \LogicException('Cannot enable Foundry\'s DAMA support: "dama/doctrine-test-bundle" is not installed. Try running "composer require --dev dama/doctrine-test-bundle".');
         }
 
         if ($this->damaNativeExtensionIsEnabled($container)) {

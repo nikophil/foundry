@@ -45,9 +45,7 @@ final class LoadFixturesListener implements EventSubscriberInterface
         $scenario = $event->getScenario();
         $feature = $event->getFeature();
 
-        $tags = [];
-
-        $tags = [...$tags, ...$feature->getTags()];
+        $tags = $feature->getTags();
 
         if ($scenario instanceof TaggedNodeInterface) {
             $tags = [...$tags, ...$scenario->getTags()];
@@ -78,15 +76,10 @@ final class LoadFixturesListener implements EventSubscriberInterface
      */
     private function parseFixtureName(array $tags): array
     {
-        $fixtureNames = [];
-
-        foreach ($tags as $tag) {
-            if (\preg_match(self::FIXTURE_TAG_PATTERN, $tag, $matches)) {
-                $fixtureNames[] = $matches[1];
-            }
-        }
-
-        return $fixtureNames;
+        return \array_values(\array_filter(\array_map(
+            static fn(string $tag): ?string => \preg_match(self::FIXTURE_TAG_PATTERN, $tag, $matches) ? $matches[1] : null,
+            $tags
+        ), static fn(?string $fixtureName): bool => null !== $fixtureName));
     }
 
     private function fixtureStoryResolver(): FixtureStoryResolver

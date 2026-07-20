@@ -11,11 +11,12 @@
 
 namespace Zenstruck\Foundry\Test\Behat\Tests\Unit\Test\Behat;
 
+use Behat\Gherkin\Node\TableNode;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Zenstruck\Foundry\ObjectFactory;
-use Zenstruck\Foundry\Persistence\PersistenceManager;
+use Zenstruck\Foundry\Persistence\IdentifierResolver;
 use Zenstruck\Foundry\Test\Behat\Attribute\FactoryShortName;
 use Zenstruck\Foundry\Test\Behat\FactoryShortNameResolver;
 use Zenstruck\Foundry\Test\Behat\FoundryTableNode;
@@ -30,7 +31,7 @@ final class FoundryTableNodeTest extends TestCase
     {
         $this->factoryResolver = new FactoryShortNameResolver([new TableTestEntityFactory()]);
 
-        $persistenceManager = $this->createStub(PersistenceManager::class);
+        $persistenceManager = $this->createStub(IdentifierResolver::class);
         $persistenceManager->method('getIdentifierValues')->willReturnCallback(
             static fn(object $object): array => ['id' => $object->id ?? 0]
         );
@@ -45,7 +46,6 @@ final class FoundryTableNodeTest extends TestCase
         $table = FoundryTableNode::create(
             $this->factoryResolver,
             $this->objectRegistry,
-            [0 => 10, 1 => 10],
             [
                 0 => ['name', 'value'],
                 1 => ['foo', 'bar'],
@@ -62,7 +62,6 @@ final class FoundryTableNodeTest extends TestCase
         $table = FoundryTableNode::create(
             $this->factoryResolver,
             $this->objectRegistry,
-            [0 => 20],
             [
                 0 => ['col'],
                 1 => [$value],
@@ -92,7 +91,6 @@ final class FoundryTableNodeTest extends TestCase
         $table = FoundryTableNode::create(
             $this->factoryResolver,
             $this->objectRegistry,
-            [0 => 30],
             [
                 0 => ['date'],
                 1 => [$date],
@@ -110,7 +108,6 @@ final class FoundryTableNodeTest extends TestCase
         $table = FoundryTableNode::create(
             $this->factoryResolver,
             $this->objectRegistry,
-            [0 => 20],
             [
                 0 => ['status'],
                 1 => [TableTestStatus::ACTIVE],
@@ -128,7 +125,6 @@ final class FoundryTableNodeTest extends TestCase
         $table = FoundryTableNode::create(
             $this->factoryResolver,
             $this->objectRegistry,
-            [0 => 20],
             [
                 0 => ['priority'],
                 1 => [TableTestPriority::HIGH],
@@ -149,7 +145,6 @@ final class FoundryTableNodeTest extends TestCase
         $table = FoundryTableNode::create(
             $this->factoryResolver,
             $this->objectRegistry,
-            [0 => 30],
             [
                 0 => ['entity'],
                 1 => [$entity],
@@ -171,7 +166,6 @@ final class FoundryTableNodeTest extends TestCase
         $table = FoundryTableNode::create(
             $this->factoryResolver,
             $this->objectRegistry,
-            [0 => 20],
             [
                 0 => ['obj'],
                 1 => [$unsupportedObject],
@@ -185,12 +179,49 @@ final class FoundryTableNodeTest extends TestCase
     }
 
     #[Test]
+    public function it_formats_rows_keyed_by_property_name_as_produced_by_the_call_filter(): void
+    {
+        $table = FoundryTableNode::create(
+            $this->factoryResolver,
+            $this->objectRegistry,
+            [
+                0 => ['name', 'value'],
+                1 => ['name' => 'foo', 'value' => 'a-longer-value'],
+            ]
+        );
+
+        $row = $table->getRowAsString(1);
+
+        self::assertSame('| foo  | a-longer-value |', $row);
+    }
+
+    #[Test]
+    public function behat_gherkin_table_node_internals_are_still_compatible(): void
+    {
+        self::assertTrue(
+            (new \ReflectionClass(TableNode::class))->hasProperty('table'),
+            'behat/gherkin changed the private "table" property of TableNode: FoundryTableNode::create() must be revisited.'
+        );
+
+        $table = FoundryTableNode::create(
+            $this->factoryResolver,
+            $this->objectRegistry,
+            [
+                10 => ['name'],
+                11 => ['foo'],
+            ]
+        );
+
+        self::assertSame([10 => ['name'], 11 => ['foo']], $table->getTable());
+        self::assertSame([10, 11], $table->getLines());
+    }
+
+    #[Test]
     public function it_formats_row_with_wrapped_values(): void
     {
         $table = FoundryTableNode::create(
             $this->factoryResolver,
             $this->objectRegistry,
-            [0 => 10, 1 => 10],
             [
                 0 => ['a', 'b'],
                 1 => ['foo', 'bar'],
