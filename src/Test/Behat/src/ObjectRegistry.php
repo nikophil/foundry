@@ -12,12 +12,13 @@
 namespace Zenstruck\Foundry\Test\Behat;
 
 use Symfony\Component\Uid\AbstractUid;
-use Zenstruck\Foundry\Persistence\Event\AfterPersist;
 use Zenstruck\Foundry\Persistence\IdentifierResolver;
 use Zenstruck\Foundry\Persistence\ProxyGenerator;
 use Zenstruck\Foundry\Story\Event\StateAddedToStory;
 use Zenstruck\Foundry\Test\Behat\Exception\ObjectAlreadyRegistered;
 use Zenstruck\Foundry\Test\Behat\Exception\ObjectNotFound;
+
+use function Zenstruck\Foundry\Persistence\repository;
 
 /**
  * @internal
@@ -31,12 +32,6 @@ final class ObjectRegistry
 
     /** @var array<class-string, array<string, object>> */
     private static array $objects = [];
-
-    /** @var array<string, mixed> */
-    private static array $lastId = [];
-
-    /** @var array<class-string, array<string, mixed>> */
-    private static array $lastIdByClass = [];
 
     public function __construct(
         private readonly FactoryShortNameResolver $factoryShortNameResolver,
@@ -74,15 +69,6 @@ final class ObjectRegistry
         return isset(self::$objects[$objectClass][$objectName]);
     }
 
-    /**
-     * @param AfterPersist<object> $event
-     */
-    public function storeLastId(AfterPersist $event): void
-    {
-        self::$lastId = $this->persistenceManager->getIdentifierValues($event->object);
-        self::$lastIdByClass[$event->object::class] = self::$lastId;
-    }
-
     public function getByFactoryShortName(string $factoryShortName, string $objectName): object
     {
         $objectClass = $this->factoryShortNameResolver->targetObjectClassFor($factoryShortName);
@@ -111,26 +97,19 @@ final class ObjectRegistry
     public function reset(): void
     {
         self::$objects = [];
-        self::$lastId = [];
-        self::$lastIdByClass = [];
     }
 
-    public function lastId(): int|string
-    {
-        if (!self::$lastId) {
-            throw new \RuntimeException('No last id found.');
-        }
-
-        return $this->coerceIdToScalar(self::$lastId);
-    }
-
+    /**
+     * Resolved from the database (the row with the highest id): also sees rows created
+     * by the application under test, not only the ones persisted by Foundry.
+     */
     public function lastIdFor(string $factoryShortName): int|string
     {
         $objectClass = $this->factoryShortNameResolver->targetObjectClassFor($factoryShortName);
+        $last = repository($objectClass)->lastOrFail();
 
         return $this->coerceIdToScalar(
-            self::$lastIdByClass[$objectClass]
-                ?? throw new \InvalidArgumentException("No object of type \"{$factoryShortName}\" has been created by Foundry yet.")
+            $this->persistenceManager->getIdentifierValues(ProxyGenerator::unwrap($last))
         );
     }
 
@@ -147,23 +126,20 @@ final class ObjectRegistry
     }
 
     /**
-     * Replaces every <lastId>, <lastId(factory)> and <id(factory, name)> placeholder in the given string.
+     * Replaces every <lastId(factory)> and <id(factory, name)> placeholder in the given string.
      */
     public function resolveIdPlaceholders(string $value): string
     {
         $resolved = \preg_replace_callback(
-            '/<(?:lastId(?:\(\s*(?<lastIdFactory>[^)]+?)\s*\))?|id\(\s*(?<factory>[^,)]+?)\s*,\s*(?<name>[^)]+?)\s*\))>/',
-            fn(array $matches): string => (string) match (true) {
-                '' !== ($matches['name'] ?? '') => $this->idFor(self::unquote($matches['factory']), self::unquote($matches['name'])),
-                // @phpstan-ignore nullCoalesce.offset (a plain <lastId> match yields no named group at runtime)
-                '' !== ($matches['lastIdFactory'] ?? '') => $this->lastIdFor(self::unquote($matches['lastIdFactory'])),
-                default => $this->lastId(),
-            },
+            '/<(?:lastId\(\s*(?<lastIdFactory>[^)]+?)\s*\)|id\(\s*(?<factory>[^,)]+?)\s*,\s*(?<name>[^)]+?)\s*\))>/',
+            fn(array $matches): string => (string) ('' !== ($matches['factory'] ?? '')
+                ? $this->idFor(self::unquote($matches['factory']), self::unquote($matches['name']))
+                : $this->lastIdFor(self::unquote($matches['lastIdFactory']))),
             $value
         ) ?? $value;
 
-        if (\preg_match('/<(?:lastId|id)\([^)]*\)>/', $resolved, $matches)) {
-            throw new \InvalidArgumentException("Malformed id placeholder \"{$matches[0]}\": expected <lastId>, <lastId(factory)> or <id(factory, name)>.");
+        if (\preg_match('/<(?:lastId(?:\([^)]*\))?|id\([^)]*\))>/', $resolved, $matches)) {
+            throw new \InvalidArgumentException("Malformed id placeholder \"{$matches[0]}\": expected <lastId(factory)> or <id(factory, name)>.");
         }
 
         return $resolved;

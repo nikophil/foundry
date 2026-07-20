@@ -11,7 +11,6 @@
 
 namespace Symfony\Component\DependencyInjection\Loader\Configurator;
 
-use Zenstruck\Foundry\Persistence\Event\AfterPersist;
 use Zenstruck\Foundry\Story\Event\StateAddedToStory;
 use Zenstruck\Foundry\Test\Behat\FactoryShortNameResolver;
 use Zenstruck\Foundry\Test\Behat\FoundryContext;
@@ -30,7 +29,6 @@ return static function(ContainerConfigurator $container): void {
             service('.zenstruck_foundry.behat.factory_resolver'),
             service('.zenstruck_foundry.persistence_manager'),
         ])
-        ->tag('kernel.event_listener', ['method' => 'storeLastId', 'event' => AfterPersist::class])
         ->tag('kernel.event_listener', ['method' => 'storeAfterStateAddedToStory', 'event' => StateAddedToStory::class])
         ->public()
 

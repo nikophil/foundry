@@ -23,5 +23,5 @@ Feature: Overriding built-in step definitions
 
   Scenario: Re-worded id transform (#[Transform] patterns can be overridden too)
     Given create a contact called "john"
-    When I am on "/[lastId]"
+    When I am on "/[lastId(contact)]"
     Then the response status code should be 404

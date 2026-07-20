@@ -99,28 +99,10 @@ final class FoundryContext implements Context
     #[Then('/^(?:the |an? )?(?|"(?P<factoryShortName>[^"]+)"|(?!\d)(?P<factoryShortName>\S+)) named (?|"(?P<objectName>[^"]+)"|(?P<objectName>\S+)) should (?:exist and )?have(?: properties)?:$/')]
     public function assertObjectHasProperties(FoundryTableNode $table, string $factoryShortName, string $objectName): void
     {
-        $parametersList = $table->getColumnsHash();
-
-        if (1 !== \count($parametersList)) {
-            throw new \InvalidArgumentException(\sprintf('Expected exactly one line of properties for assertion, got %d lines.', \count($parametersList)));
-        }
-
         $object = $this->objectRegistry->getByFactoryShortName($factoryShortName, $objectName);
-        $this->refreshObject($object, $factoryShortName, $objectName);
+        $this->refreshObject($object, "Object with name \"{$objectName}\" of type \"{$factoryShortName}\" no longer exists in the database.");
 
-        foreach ($parametersList[0] as $key => $valueExpected) {
-            $actualValue = get($object, $key);
-
-            match (true) {
-                null === $valueExpected => Assert::that($actualValue)->is(null),
-
-                $valueExpected instanceof \DateTimeInterface => self::assertSameDate($actualValue, $valueExpected),
-
-                \is_object($valueExpected) => $this->assertSameObject($actualValue, $valueExpected),
-
-                default => Assert::that($actualValue)->equals($valueExpected),
-            };
-        }
+        $this->assertProperties($object, self::singleRow($table));
     }
 
     #[Then('/^(?:the |an? )?(?|"(?P<factoryShortName>[^"]+)"|(?!\d)(?P<factoryShortName>\S+)) named (?|"(?P<objectName>[^"]+)"|(?P<objectName>\S+)) should exist$/')]
@@ -164,8 +146,54 @@ final class FoundryContext implements Context
         Assert::fail("Object with name \"{$objectName}\" of type \"{$factoryShortName}\" exists although it should not.");
     }
 
+    #[Then('/^an? (?|"(?P<factoryShortName>[^"]+)"|(?!\d)(?P<factoryShortName>\S+)) should exist with:$/')]
+    public function assertSomeObjectExistsWithProperties(FoundryTableNode $table, string $factoryShortName): void
+    {
+        $this->repositoryAssertionFor($factoryShortName)->exists(
+            self::singleRow($table),
+            "No \"{$factoryShortName}\" matching the given properties exists in the database."
+        );
+    }
+
+    #[Then('/^no (?|"(?P<factoryShortName>[^"]+)"|(?!\d)(?P<factoryShortName>\S+)) should exist with:$/')]
+    public function assertNoObjectExistsWithProperties(FoundryTableNode $table, string $factoryShortName): void
+    {
+        $this->repositoryAssertionFor($factoryShortName)->notExists(
+            self::singleRow($table),
+            "A \"{$factoryShortName}\" matching the given properties exists in the database although it should not."
+        );
+    }
+
+    #[Then('/^the (?|"(?P<factoryShortName>[^"]+)"|(?!\d)(?P<factoryShortName>\S+)) with id (?|"(?P<id>[^"]+)"|(?P<id>\S+)) should exist$/')]
+    public function assertObjectWithIdExists(string $factoryShortName, string $id): void
+    {
+        $this->findByIdOrFail($factoryShortName, $id);
+    }
+
+    #[Then('/^the (?|"(?P<factoryShortName>[^"]+)"|(?!\d)(?P<factoryShortName>\S+)) with id (?|"(?P<id>[^"]+)"|(?P<id>\S+)) should not exist$/')]
+    public function assertObjectWithIdDoesNotExist(string $factoryShortName, string $id): void
+    {
+        $objectClass = $this->factoryResolver->targetObjectClassFor($factoryShortName);
+
+        Assert::that(repository($objectClass)->find($id))
+            ->isNull("\"{$factoryShortName}\" with id \"{$id}\" still exists in the database although it should not.");
+    }
+
+    #[Then('/^the (?|"(?P<factoryShortName>[^"]+)"|(?!\d)(?P<factoryShortName>\S+)) with id (?|"(?P<id>[^"]+)"|(?P<id>\S+)) should (?:exist and )?have(?: properties)?:$/')]
+    public function assertObjectWithIdHasProperties(FoundryTableNode $table, string $factoryShortName, string $id): void
+    {
+        $object = $this->findByIdOrFail($factoryShortName, $id);
+        $this->refreshObject($object, "\"{$factoryShortName}\" with id \"{$id}\" no longer exists in the database.");
+
+        $this->assertProperties($object, self::singleRow($table));
+    }
+
+    /**
+     * The bare <lastId> placeholder is not supported: fail loudly instead of leaking
+     * the placeholder as a literal string into the step argument.
+     */
     #[Transform('/(.*)<lastId>(.*)/')]
-    public function transformLastId(string $before, string $after): string
+    public function rejectBareLastIdPlaceholder(string $before, string $after): string
     {
         return $this->objectRegistry->resolveIdPlaceholders("{$before}<lastId>{$after}");
     }
@@ -213,7 +241,7 @@ final class FoundryContext implements Context
      * When auto-refresh is not handled by lazy objects, re-read the object from the database
      * so assertions see mutations made by the application under test.
      */
-    private function refreshObject(object &$object, string $factoryShortName, string $objectName): void
+    private function refreshObject(object &$object, string $notFoundMessage): void
     {
         if (Configuration::autoRefreshWithLazyObjectsIsEnabled() || null === $this->identifierCriteriaFor($object)) {
             return;
@@ -222,8 +250,49 @@ final class FoundryContext implements Context
         try {
             refresh($object);
         } catch (ObjectNoLongerExist) {
-            Assert::fail("Object with name \"{$objectName}\" of type \"{$factoryShortName}\" no longer exists in the database.");
+            Assert::fail($notFoundMessage);
         }
+    }
+
+    private function findByIdOrFail(string $factoryShortName, string $id): object
+    {
+        $objectClass = $this->factoryResolver->targetObjectClassFor($factoryShortName);
+
+        return repository($objectClass)->findOrFail($id);
+    }
+
+    /**
+     * @param array<string, mixed> $parameters
+     */
+    private function assertProperties(object $object, array $parameters): void
+    {
+        foreach ($parameters as $key => $valueExpected) {
+            $actualValue = get($object, $key);
+
+            match (true) {
+                null === $valueExpected => Assert::that($actualValue)->is(null),
+
+                $valueExpected instanceof \DateTimeInterface => self::assertSameDate($actualValue, $valueExpected),
+
+                \is_object($valueExpected) => $this->assertSameObject($actualValue, $valueExpected),
+
+                default => Assert::that($actualValue)->equals($valueExpected),
+            };
+        }
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private static function singleRow(FoundryTableNode $table): array
+    {
+        $parametersList = $table->getColumnsHash();
+
+        if (1 !== \count($parametersList)) {
+            throw new \InvalidArgumentException(\sprintf('Expected exactly one line of properties for assertion, got %d lines.', \count($parametersList)));
+        }
+
+        return $parametersList[0];
     }
 
     private static function assertSameDate(mixed $actual, \DateTimeInterface $expected): void

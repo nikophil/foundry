@@ -16,6 +16,7 @@ use Symfony\Component\Config\Loader\LoaderInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 use Zenstruck\Foundry\ORM\ResetDatabase\ResetDatabaseMode;
+use Zenstruck\Foundry\Tests\Fixture\App\Controller\CreateGenericModel;
 use Zenstruck\Foundry\Tests\Fixture\App\Controller\DeleteGenericModel;
 use Zenstruck\Foundry\Tests\Fixture\App\Controller\HelloWorldController;
 use Zenstruck\Foundry\Tests\Fixture\App\Controller\UpdateGenericModel;
@@ -46,6 +47,7 @@ class BehatTestKernel extends FoundryTestKernel
 
         $c->register(HelloWorldController::class)->setAutowired(true)->setAutoconfigured(true)->addTag('controller.service_arguments');
         $c->register(UpdateGenericModel::class)->setAutowired(true)->setAutoconfigured(true)->addTag('controller.service_arguments');
+        $c->register(CreateGenericModel::class)->setAutowired(true)->setAutoconfigured(true)->addTag('controller.service_arguments');
         $c->register(DeleteGenericModel::class)->setAutowired(true)->setAutoconfigured(true)->addTag('controller.service_arguments');
         $c->register(ResetDisabledTestContext::class)->setAutowired(true)->setAutoconfigured(true);
         $c->register(TestFoundryContext::class)->setAutowired(true)->setAutoconfigured(true);

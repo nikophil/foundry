@@ -15,9 +15,7 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Uid\Uuid;
 use Zenstruck\Foundry\ObjectFactory;
-use Zenstruck\Foundry\Persistence\Event\AfterPersist;
 use Zenstruck\Foundry\Persistence\IdentifierResolver;
-use Zenstruck\Foundry\Persistence\PersistentObjectFactory;
 use Zenstruck\Foundry\Persistence\Proxy;
 use Zenstruck\Foundry\Persistence\ProxyRepositoryDecorator;
 use Zenstruck\Foundry\Story\Event\StateAddedToStory;
@@ -127,29 +125,16 @@ final class ObjectRegistryTest extends TestCase
     }
 
     #[Test]
-    public function it_stores_last_id_from_after_persist_event(): void
-    {
-        $user = new User(id: 42, name: 'John');
-        $event = new AfterPersist($user, [], $this->createStub(PersistentObjectFactory::class));
-
-        $this->registry->storeLastId($event);
-
-        self::assertSame(42, $this->registry->lastId());
-    }
-
-    #[Test]
-    public function it_stores_string_id_from_after_persist_event(): void
+    public function it_resolves_string_id(): void
     {
         $user = new User(id: 'uuid-123', name: 'John');
-        $event = new AfterPersist($user, [], $this->createStub(PersistentObjectFactory::class));
+        $this->registry->store($user, 'john');
 
-        $this->registry->storeLastId($event);
-
-        self::assertSame('uuid-123', $this->registry->lastId());
+        self::assertSame('uuid-123', $this->registry->idFor('user', 'john'));
     }
 
     #[Test]
-    public function it_stores_uuid_from_after_persist_event(): void
+    public function it_resolves_uuid_id_to_its_rfc4122_form(): void
     {
         $uuid = Uuid::v7();
 
@@ -159,61 +144,9 @@ final class ObjectRegistryTest extends TestCase
         $registry = new ObjectRegistry($this->resolver, $persistenceManager);
         $registry->reset();
 
-        $user = new User(id: 1, name: 'John');
-        $event = new AfterPersist($user, [], $this->createStub(PersistentObjectFactory::class));
+        $registry->store(new User(id: 1, name: 'John'), 'john');
 
-        $registry->storeLastId($event);
-
-        self::assertSame($uuid->toRfc4122(), $registry->lastId());
-    }
-
-    #[Test]
-    public function it_throws_when_no_last_id_available(): void
-    {
-        $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('No last id found.');
-
-        $this->registry->lastId();
-    }
-
-    #[Test]
-    public function it_resets_last_id(): void
-    {
-        $user = new User(id: 42, name: 'John');
-        $event = new AfterPersist($user, [], $this->createStub(PersistentObjectFactory::class));
-        $this->registry->storeLastId($event);
-
-        $this->registry->reset();
-
-        $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('No last id found.');
-
-        $this->registry->lastId();
-    }
-
-    #[Test]
-    public function it_gets_last_id_for_specific_factory_even_for_unnamed_objects(): void
-    {
-        $user1 = new User(id: 1, name: 'John');
-        $user2 = new User(id: 2, name: 'Jane');
-
-        $this->registry->storeLastId(new AfterPersist($user1, [], $this->createStub(PersistentObjectFactory::class)));
-        $this->registry->storeLastId(new AfterPersist($user2, [], $this->createStub(PersistentObjectFactory::class)));
-
-        self::assertSame(2, $this->registry->lastIdFor('user'));
-    }
-
-    #[Test]
-    public function it_tracks_last_id_per_class(): void
-    {
-        $user = new User(id: 1, name: 'John');
-        $post = new Post(id: 2, title: 'Hello');
-
-        $this->registry->storeLastId(new AfterPersist($user, [], $this->createStub(PersistentObjectFactory::class)));
-        $this->registry->storeLastId(new AfterPersist($post, [], $this->createStub(PersistentObjectFactory::class)));
-
-        self::assertSame(2, $this->registry->lastId());
-        self::assertSame(1, $this->registry->lastIdFor('user'));
+        self::assertSame($uuid->toRfc4122(), $registry->idFor('user', 'john'));
     }
 
     #[Test]
@@ -246,34 +179,20 @@ final class ObjectRegistryTest extends TestCase
     }
 
     #[Test]
-    public function it_throws_when_no_objects_for_factory(): void
-    {
-        $user = new User(id: 1, name: 'John');
-        $this->registry->store($user, 'john');
-
-        $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('No object of type "user" has been created by Foundry yet.');
-
-        $this->registry->lastIdFor('user');
-    }
-
-    #[Test]
     public function it_throws_when_entity_has_multiple_identifiers(): void
     {
         $persistenceManager = $this->createStub(IdentifierResolver::class);
         $persistenceManager->method('getIdentifierValues')->willReturn(['id1' => 1, 'id2' => 2]);
 
         $registry = new ObjectRegistry($this->resolver, $persistenceManager);
+        $registry->reset();
 
-        $user = new User(id: 42, name: 'John');
-        $event = new AfterPersist($user, [], $this->createStub(PersistentObjectFactory::class));
-
-        $registry->storeLastId($event);
+        $registry->store(new User(id: 42, name: 'John'), 'john');
 
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage('Cannot resolve the id: the entity must have exactly one identifier value, got 2 ("id1", "id2").');
 
-        $registry->lastId();
+        $registry->idFor('user', 'john');
     }
 
     #[Test]
@@ -283,29 +202,25 @@ final class ObjectRegistryTest extends TestCase
         $persistenceManager->method('getIdentifierValues')->willReturn(['id' => ['invalid']]);
 
         $registry = new ObjectRegistry($this->resolver, $persistenceManager);
+        $registry->reset();
 
-        $user = new User(id: 42, name: 'John');
-        $event = new AfterPersist($user, [], $this->createStub(PersistentObjectFactory::class));
-
-        $registry->storeLastId($event);
+        $registry->store(new User(id: 42, name: 'John'), 'john');
 
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage('Wrong type for the id: expected int, string or Uid, got "array".');
 
-        $registry->lastId();
+        $registry->idFor('user', 'john');
     }
 
     #[Test]
     public function it_resolves_all_id_placeholders_in_a_string(): void
     {
-        $john = new User(id: 7, name: 'John');
-        $this->registry->store($john, 'john');
-        $this->registry->storeLastId(new AfterPersist($john, [], $this->createStub(PersistentObjectFactory::class)));
-        $this->registry->storeLastId(new AfterPersist(new User(id: 9, name: 'Jane'), [], $this->createStub(PersistentObjectFactory::class)));
+        $this->registry->store(new User(id: 7, name: 'John'), 'john');
+        $this->registry->store(new User(id: 9, name: 'Jane'), 'jane');
 
         self::assertSame(
-            '/users/9/friends/7/last-user/9',
-            $this->registry->resolveIdPlaceholders('/users/<lastId>/friends/<id(user, john)>/last-user/<lastId(user)>')
+            '/users/9/friends/7',
+            $this->registry->resolveIdPlaceholders('/users/<id(user, jane)>/friends/<id(user, john)>')
         );
     }
 
@@ -328,9 +243,18 @@ final class ObjectRegistryTest extends TestCase
     public function it_throws_on_malformed_placeholder(): void
     {
         $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('Malformed id placeholder "<id(user)>": expected <lastId>, <lastId(factory)> or <id(factory, name)>.');
+        $this->expectExceptionMessage('Malformed id placeholder "<id(user)>": expected <lastId(factory)> or <id(factory, name)>.');
 
         $this->registry->resolveIdPlaceholders('/users/<id(user)>');
+    }
+
+    #[Test]
+    public function it_throws_on_bare_last_id_placeholder(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Malformed id placeholder "<lastId>": expected <lastId(factory)> or <id(factory, name)>.');
+
+        $this->registry->resolveIdPlaceholders('/users/<lastId>');
     }
 
     #[Test]

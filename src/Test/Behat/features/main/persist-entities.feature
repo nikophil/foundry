@@ -39,20 +39,6 @@ Feature: Test persisting entities
     Given there is a "generic entity" named "the object" with:
       | prop1 |
       | foo   |
-    When I am on "/orm/update/<lastId>/bar"
-    Then the response status code should be 200
-    Then "generic entity" named "the object" should have properties:
-      | prop1 |
-      | bar   |
-
-  Scenario: Throws if last id is not found (!)
-    When I am on "/orm/update/<lastId>/bar"
-    Then an "RuntimeException" exception should be thrown containing message "No last id found"
-
-  Scenario: Can access last created entity ID
-    Given there is a "generic entity" named "the object" with:
-      | prop1 |
-      | foo   |
     And there is a contact
     When I am on "/orm/update/<lastId(generic entity)>/bar"
     Then the response status code should be 200
@@ -62,7 +48,14 @@ Feature: Test persisting entities
 
   Scenario: Throws if last id is not found (!)
     When I am on "/orm/update/<lastId(generic entity)>/bar"
-    Then an "InvalidArgumentException" exception should be thrown containing message "No object of type \"generic entity\" has been created by Foundry yet"
+    Then an "InvalidArgumentException" exception should be thrown containing message "No \"generic entity\" found in the database"
+
+  Scenario: Bare lastId placeholder is not supported (!)
+    Given there is a "generic entity" with:
+      | prop1 |
+      | foo   |
+    When I am on "/orm/update/<lastId>/bar"
+    Then an "InvalidArgumentException" exception should be thrown containing message "Malformed id placeholder"
 
   Scenario: Can access an ID from reference
     Given there is a "generic entity" named "the object" with:
@@ -96,7 +89,7 @@ Feature: Test persisting entities
     Given there is a "generic entity" named "the object" with:
       | prop1 |
       | foo   |
-    When I am on "/orm/update/<id(generic entity, the object)>/bar-<lastId>"
+    When I am on "/orm/update/<id(generic entity, the object)>/bar-<lastId(generic entity)>"
     Then the response status code should be 200
     Then "generic entity" named "the object" should have properties:
       | prop1                        |
@@ -129,3 +122,49 @@ Feature: Test persisting entities
     When I am on "/orm/delete/<id(generic entity, the object)>"
     Then "generic entity" named "the object" should exist
     Then an "AssertionFailed" exception should be thrown containing message "does not exist in the database although it should"
+
+  Scenario: lastId sees entities created by the application itself
+    Given there is a "generic entity" with:
+      | prop1 |
+      | foo   |
+    When I am on "/orm/create/created-by-the-app"
+    Then the response status code should be 200
+    Then 2 "generic entities" should exist
+    Then the "generic entity" with id "<lastId(generic entity)>" should have properties:
+      | prop1              |
+      | created-by-the-app |
+
+  Scenario: Can assert existence by id
+    Given there is a "generic entity" named "the object" with:
+      | prop1 |
+      | foo   |
+    Then the "generic entity" with id "<id(generic entity, the object)>" should exist
+    Then the "generic entity" with id 0 should not exist
+
+  Scenario: Assertion by id fails when the row does not exist (!)
+    Then the "generic entity" with id 0 should exist
+    Then an "AssertionFailed" exception should be thrown containing message "No \"generic entity\" with id \"0\" found in the database"
+
+  Scenario: Can assert existence with properties
+    Given there is a "generic entity" with:
+      | prop1 |
+      | foo   |
+    Then a "generic entity" should exist with:
+      | prop1 |
+      | foo   |
+    Then no "generic entity" should exist with:
+      | prop1 |
+      | bar   |
+
+  Scenario: Property-based assertions see entities created by the application itself
+    When I am on "/orm/create/created-by-the-app"
+    Then the response status code should be 200
+    Then a "generic entity" should exist with:
+      | prop1              |
+      | created-by-the-app |
+
+  Scenario: Property-based assertion fails when no row matches (!)
+    Then a "generic entity" should exist with:
+      | prop1   |
+      | missing |
+    Then an "AssertionFailed" exception should be thrown containing message "No \"generic entity\" matching the given properties exists in the database"
