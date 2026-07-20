@@ -154,7 +154,7 @@ final class FoundryCallFilter implements CallFilter
 
     private function resolveExplicitObjectReference(string $propertyName, string $value): ?object
     {
-        if (!\preg_match('/^<ref\((?<factoryShortName>[^,]+), (?<objectName>[^)]+)\)>$/', $value, $matches)) {
+        if (!\preg_match('/^<foundry:ref\((?<factoryShortName>[^,]+), (?<objectName>[^)]+)\)>$/', $value, $matches)) {
             return null;
         }
 

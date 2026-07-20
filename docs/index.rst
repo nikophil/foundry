@@ -2938,16 +2938,16 @@ the category named "tech" in the registry.
 
 .. tip::
 
-    If for any reason the property type cannot be resolved, you can use the special syntax ``<ref(type, name)>``:
+    If for any reason the property type cannot be resolved, you can use the special syntax ``<foundry:ref(type, name)>``:
 
     .. code-block:: gherkin
 
         Given there is a category named "tech"
         Given there is a post named "my-post" with:
           | title   | category                  |
-          | My Post | <ref(category, tech)>     |
+          | My Post | <foundry:ref(category, tech)>     |
 
-    The ``<ref(type, name)>`` syntax is an escape hatch for edge cases where automatic type resolution fails.
+    The ``<foundry:ref(type, name)>`` syntax is an escape hatch for edge cases where automatic type resolution fails.
     Prefer using automatic resolution (just the object name) whenever possible, as it is cleaner and more readable.
 
 .. note::
@@ -2997,7 +2997,7 @@ Assertions
 
     # assert by id, either a literal one or an id placeholder (see below):
     Then the contact with id 42 should exist
-    Then the contact with id "<lastId(contact)>" should have properties:
+    Then the contact with id "<foundry:lastId(contact)>" should have properties:
       | name     |
       | John Doe |
     Then the contact with id 42 should not exist
@@ -3010,10 +3010,16 @@ Accessing ids of created objects
     Given there is a contact named "john"
 
     # Access the id of the last contact in the database:
-    When I am on "/contacts/<lastId(contact)>"
+    When I am on "/contacts/<foundry:lastId(contact)>"
 
     # Be even more specific with the name:
-    When I am on "/contacts/<id(contact, john)>"
+    When I am on "/contacts/<foundry:id(contact, john)>"
+
+.. note::
+
+    The ``foundry:`` prefix prevents any clash with Scenario Outline tokens (which also use the
+    ``<...>`` syntax) or with literal text handled by the application under test: any ``<...>``
+    value without the prefix is left untouched by Foundry.
 
 .. tip::
 
@@ -3025,32 +3031,32 @@ Accessing ids of created objects
         Given there is a category named "tech"
         Given there is a post named "my-post" with:
           | title   | externalReference       |
-          | My Post | ref-<id(category, tech)> |
+          | My Post | ref-<foundry:id(category, tech)> |
 
     Cell placeholders are resolved **before** the step runs: they only see objects created by previous
-    steps (a row cannot reference another row of the same table, and ``<lastId(...)>`` in a creation
+    steps (a row cannot reference another row of the same table, and ``<foundry:lastId(...)>`` in a creation
     table refers to the last row existing before that step). They always use the canonical ``<...>``
     syntax, even when the ``#[Transform]`` patterns have been re-worded.
 
 .. warning::
 
-    ``<lastId(...)>`` is resolved from the database: the row with the **highest id** is considered the
+    ``<foundry:lastId(...)>`` is resolved from the database: the row with the **highest id** is considered the
     last one. This works whoever created the row — a Foundry ``Given`` step, a fixture, or the
     application under test — but it assumes ids follow the creation order (auto-increment columns,
     sequences, or time-ordered uids such as Uuid v7 and Ulid). For randomly distributed ids (e.g.
-    Uuid v4), name the object and use ``<id(factory, name)>`` instead.
+    Uuid v4), name the object and use ``<foundry:id(factory, name)>`` instead.
 
 .. warning::
 
-    The ``<lastId(...)>`` and ``<id(...)>`` syntax only work for object which have "simple" ids (integer, string or Uuid).
+    The ``<foundry:lastId(...)>`` and ``<foundry:id(...)>`` syntax only work for object which have "simple" ids (integer, string or Uuid).
     This means it won't work for objects with `composite keys <https://www.doctrine-project.org/projects/doctrine-orm/en/3.6/tutorials/composite-primary-keys.html>`_
     nor for `derived entities <https://www.doctrine-project.org/projects/doctrine-orm/en/3.6/tutorials/composite-primary-keys.html#use-case-2-simple-derived-identity>`_.
 
 .. note::
 
-    ``<id(factory, name)>`` relies on the object registry: as for object references, these ids can be
+    ``<foundry:id(factory, name)>`` relies on the object registry: as for object references, these ids can be
     accessed until the next database reset occurs, and they are cleared after each feature.
-    ``<lastId(factory)>`` only relies on the database content.
+    ``<foundry:lastId(factory)>`` only relies on the database content.
 
 Overriding built-in step definitions
 ....................................

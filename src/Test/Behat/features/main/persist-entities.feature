@@ -40,35 +40,28 @@ Feature: Test persisting entities
       | prop1 |
       | foo   |
     And there is a contact
-    When I am on "/orm/update/<lastId(generic entity)>/bar"
+    When I am on "/orm/update/<foundry:lastId(generic entity)>/bar"
     Then the response status code should be 200
     Then "generic entity" named "the object" should have properties:
       | prop1 |
       | bar   |
 
   Scenario: Throws if last id is not found (!)
-    When I am on "/orm/update/<lastId(generic entity)>/bar"
-    Then an "InvalidArgumentException" exception should be thrown containing message "No \"generic entity\" found in the database"
-
-  Scenario: Bare lastId placeholder is not supported (!)
-    Given there is a "generic entity" with:
-      | prop1 |
-      | foo   |
-    When I am on "/orm/update/<lastId>/bar"
-    Then an "InvalidArgumentException" exception should be thrown containing message "Malformed id placeholder"
+    When I am on "/orm/update/<foundry:lastId(generic entity)>/bar"
+    Then a "RuntimeException" exception should be thrown containing message "objects persisted"
 
   Scenario: Can access an ID from reference
     Given there is a "generic entity" named "the object" with:
       | prop1 |
       | foo   |
-    When I am on "/orm/update/<id(generic entity, the object)>/bar"
+    When I am on "/orm/update/<foundry:id(generic entity, the object)>/bar"
     Then the response status code should be 200
     Then "generic entity" named "the object" should have properties:
       | prop1 |
       | bar   |
 
   Scenario: Throws if the reference is not found (!)
-    When I am on "/orm/update/<id(generic entity, the object)>/bar"
+    When I am on "/orm/update/<foundry:id(generic entity, the object)>/bar"
     Then an "ObjectNotFound" exception should be thrown containing message "Object \"generic entity the object\" was not found"
 
   Scenario: lastId for a type also sees unnamed entities
@@ -78,7 +71,7 @@ Feature: Test persisting entities
     And there is a "generic entity" with:
       | prop1 |
       | foo   |
-    When I am on "/orm/update/<lastId(generic entity)>/bar"
+    When I am on "/orm/update/<foundry:lastId(generic entity)>/bar"
     Then the response status code should be 200
     # the named entity was created first: the placeholder resolved to the unnamed one
     Then "generic entity" named "the object" should have properties:
@@ -89,11 +82,11 @@ Feature: Test persisting entities
     Given there is a "generic entity" named "the object" with:
       | prop1 |
       | foo   |
-    When I am on "/orm/update/<id(generic entity, the object)>/bar-<lastId(generic entity)>"
+    When I am on "/orm/update/<foundry:id(generic entity, the object)>/bar-<foundry:lastId(generic entity)>"
     Then the response status code should be 200
     Then "generic entity" named "the object" should have properties:
       | prop1                        |
-      | bar-<lastId(generic entity)> |
+      | bar-<foundry:lastId(generic entity)> |
 
   Scenario: Can use id placeholders in table cells
     Given there is a "generic entity" named "first" with:
@@ -101,17 +94,17 @@ Feature: Test persisting entities
       | foo   |
     Given there is a "generic entity" named "second" with:
       | prop1                           |
-      | ref-<id(generic entity, first)> |
+      | ref-<foundry:id(generic entity, first)> |
     Then "generic entity" named "second" should have properties:
       | prop1                           |
-      | ref-<id(generic entity, first)> |
+      | ref-<foundry:id(generic entity, first)> |
 
   Scenario: Assertions are database-backed
     Given there is a "generic entity" named "the object" with:
       | prop1 |
       | foo   |
     Then "generic entity" named "the object" should exist
-    When I am on "/orm/delete/<id(generic entity, the object)>"
+    When I am on "/orm/delete/<foundry:id(generic entity, the object)>"
     Then the response status code should be 200
     Then "generic entity" named "the object" should not exist
 
@@ -119,7 +112,7 @@ Feature: Test persisting entities
     Given there is a "generic entity" named "the object" with:
       | prop1 |
       | foo   |
-    When I am on "/orm/delete/<id(generic entity, the object)>"
+    When I am on "/orm/delete/<foundry:id(generic entity, the object)>"
     Then "generic entity" named "the object" should exist
     Then an "AssertionFailed" exception should be thrown containing message "does not exist in the database although it should"
 
@@ -130,7 +123,7 @@ Feature: Test persisting entities
     When I am on "/orm/create/created-by-the-app"
     Then the response status code should be 200
     Then 2 "generic entities" should exist
-    Then the "generic entity" with id "<lastId(generic entity)>" should have properties:
+    Then the "generic entity" with id "<foundry:lastId(generic entity)>" should have properties:
       | prop1              |
       | created-by-the-app |
 
@@ -138,12 +131,12 @@ Feature: Test persisting entities
     Given there is a "generic entity" named "the object" with:
       | prop1 |
       | foo   |
-    Then the "generic entity" with id "<id(generic entity, the object)>" should exist
+    Then the "generic entity" with id "<foundry:id(generic entity, the object)>" should exist
     Then the "generic entity" with id 0 should not exist
 
   Scenario: Assertion by id fails when the row does not exist (!)
     Then the "generic entity" with id 0 should exist
-    Then an "AssertionFailed" exception should be thrown containing message "No \"generic entity\" with id \"0\" found in the database"
+    Then a "RuntimeException" exception should be thrown containing message "object found for"
 
   Scenario: Can assert existence with properties
     Given there is a "generic entity" with:

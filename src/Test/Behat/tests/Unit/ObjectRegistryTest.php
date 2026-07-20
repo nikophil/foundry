@@ -220,7 +220,7 @@ final class ObjectRegistryTest extends TestCase
 
         self::assertSame(
             '/users/9/friends/7',
-            $this->registry->resolveIdPlaceholders('/users/<id(user, jane)>/friends/<id(user, john)>')
+            $this->registry->resolveIdPlaceholders('/users/<foundry:id(user, jane)>/friends/<foundry:id(user, john)>')
         );
     }
 
@@ -230,7 +230,7 @@ final class ObjectRegistryTest extends TestCase
         $john = new User(id: 7, name: 'John');
         $this->registry->store($john, 'john doe');
 
-        self::assertSame('/7', $this->registry->resolveIdPlaceholders('/<id( "user" , "john doe" )>'));
+        self::assertSame('/7', $this->registry->resolveIdPlaceholders('/<foundry:id( "user" , "john doe" )>'));
     }
 
     #[Test]
@@ -243,18 +243,20 @@ final class ObjectRegistryTest extends TestCase
     public function it_throws_on_malformed_placeholder(): void
     {
         $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('Malformed id placeholder "<id(user)>": expected <lastId(factory)> or <id(factory, name)>.');
+        $this->expectExceptionMessage('Malformed id placeholder "<foundry:id(user)>": expected <foundry:lastId(factory)> or <foundry:id(factory, name)>.');
 
-        $this->registry->resolveIdPlaceholders('/users/<id(user)>');
+        $this->registry->resolveIdPlaceholders('/users/<foundry:id(user)>');
     }
 
     #[Test]
-    public function it_throws_on_bare_last_id_placeholder(): void
+    public function it_leaves_unprefixed_placeholders_untouched(): void
     {
-        $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('Malformed id placeholder "<lastId>": expected <lastId(factory)> or <id(factory, name)>.');
+        $this->registry->store(new User(id: 7, name: 'John'), 'john');
 
-        $this->registry->resolveIdPlaceholders('/users/<lastId>');
+        self::assertSame(
+            '/users/<lastId>/friends/<id(user, john)>',
+            $this->registry->resolveIdPlaceholders('/users/<lastId>/friends/<id(user, john)>')
+        );
     }
 
     #[Test]

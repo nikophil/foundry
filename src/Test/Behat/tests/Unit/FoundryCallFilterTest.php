@@ -168,7 +168,7 @@ final class FoundryCallFilterTest extends TestCase
         $referencedObject = new TestEntity(id: 1, name: 'Referenced');
         $this->objectRegistry->store($referencedObject, 'the-ref');
 
-        $table = $this->createTableNodeFromRow(['relation' => '<ref(test entity, the-ref)>']);
+        $table = $this->createTableNodeFromRow(['relation' => '<foundry:ref(test entity, the-ref)>']);
         $call = $this->createDefinitionCallForFoundryContext([
             'factoryShortName' => 'test entity',
             'table' => $table,
@@ -186,7 +186,7 @@ final class FoundryCallFilterTest extends TestCase
     #[Test]
     public function it_throws_on_invalid_object_reference(): void
     {
-        $table = $this->createTableNodeFromRow(['relation' => '<ref(test entity, nonexistent)>']);
+        $table = $this->createTableNodeFromRow(['relation' => '<foundry:ref(test entity, nonexistent)>']);
         $call = $this->createDefinitionCallForFoundryContext([
             'factoryShortName' => 'test entity',
             'table' => $table,

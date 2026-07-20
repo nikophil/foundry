@@ -128,7 +128,7 @@ override-steps:
                 # a table step can also be re-worded with a regex using anonymous capture groups
                 'there is a(n) :factoryShortName with:': '/^an? (\S+) exists with:$/'
                 # transformations (#[Transform]) go through the same translator: they can be re-worded too
-                '/(.*)<lastId\(\s*([^)]+?)\s*\)>(.*)/': '/(.*)\[lastId\(([^)]+?)\)\](.*)/'
+                '/(.*)<foundry:lastId\(\s*([^)]+?)\s*\)>(.*)/': '/(.*)\[lastId\(([^)]+?)\)\](.*)/'
 
     suites:
         main: false

@@ -126,20 +126,20 @@ final class ObjectRegistry
     }
 
     /**
-     * Replaces every <lastId(factory)> and <id(factory, name)> placeholder in the given string.
+     * Replaces every <foundry:lastId(factory)> and <foundry:id(factory, name)> placeholder in the given string.
      */
     public function resolveIdPlaceholders(string $value): string
     {
         $resolved = \preg_replace_callback(
-            '/<(?:lastId\(\s*(?<lastIdFactory>[^)]+?)\s*\)|id\(\s*(?<factory>[^,)]+?)\s*,\s*(?<name>[^)]+?)\s*\))>/',
+            '/<foundry:(?:lastId\(\s*(?<lastIdFactory>[^)]+?)\s*\)|id\(\s*(?<factory>[^,)]+?)\s*,\s*(?<name>[^)]+?)\s*\))>/',
             fn(array $matches): string => (string) ('' !== ($matches['factory'] ?? '')
                 ? $this->idFor(self::unquote($matches['factory']), self::unquote($matches['name']))
                 : $this->lastIdFor(self::unquote($matches['lastIdFactory']))),
             $value
         ) ?? $value;
 
-        if (\preg_match('/<(?:lastId(?:\([^)]*\))?|id\([^)]*\))>/', $resolved, $matches)) {
-            throw new \InvalidArgumentException("Malformed id placeholder \"{$matches[0]}\": expected <lastId(factory)> or <id(factory, name)>.");
+        if (\preg_match('/<foundry:(?:lastId(?:\([^)]*\))?|id\([^)]*\))>/', $resolved, $matches)) {
+            throw new \InvalidArgumentException("Malformed id placeholder \"{$matches[0]}\": expected <foundry:lastId(factory)> or <foundry:id(factory, name)>.");
         }
 
         return $resolved;

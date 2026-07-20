@@ -188,26 +188,16 @@ final class FoundryContext implements Context
         $this->assertProperties($object, self::singleRow($table));
     }
 
-    /**
-     * The bare <lastId> placeholder is not supported: fail loudly instead of leaking
-     * the placeholder as a literal string into the step argument.
-     */
-    #[Transform('/(.*)<lastId>(.*)/')]
-    public function rejectBareLastIdPlaceholder(string $before, string $after): string
-    {
-        return $this->objectRegistry->resolveIdPlaceholders("{$before}<lastId>{$after}");
-    }
-
-    #[Transform('/(.*)<lastId\(\s*([^)]+?)\s*\)>(.*)/')]
+    #[Transform('/(.*)<foundry:lastId\(\s*([^)]+?)\s*\)>(.*)/')]
     public function transformLastIdForSpecificObject(string $before, string $factoryShortName, string $after): string
     {
-        return $this->objectRegistry->resolveIdPlaceholders("{$before}<lastId({$factoryShortName})>{$after}");
+        return $this->objectRegistry->resolveIdPlaceholders("{$before}<foundry:lastId({$factoryShortName})>{$after}");
     }
 
-    #[Transform('/(.*)<id\(\s*([^,)]+?)\s*,\s*([^)]+?)\s*\)>(.*)/')]
+    #[Transform('/(.*)<foundry:id\(\s*([^,)]+?)\s*,\s*([^)]+?)\s*\)>(.*)/')]
     public function transformIdForSpecificObject(string $before, string $factoryShortName, string $objectName, string $after): string
     {
-        return $this->objectRegistry->resolveIdPlaceholders("{$before}<id({$factoryShortName}, {$objectName})>{$after}");
+        return $this->objectRegistry->resolveIdPlaceholders("{$before}<foundry:id({$factoryShortName}, {$objectName})>{$after}");
     }
 
     /**

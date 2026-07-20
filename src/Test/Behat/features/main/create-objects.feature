@@ -63,11 +63,11 @@ Feature: Test objects creation
     And there is an address named "the address"
     And there is a contact named A with:
       | name     | category                    | address                     |
-      | John Doe | <ref(category, MyCategory)> | <ref(address, the address)> |
+      | John Doe | <foundry:ref(category, MyCategory)> | <foundry:ref(address, the address)> |
     When I am on "/"
     Then contact named A should have properties:
       | name     | category                    | address                     |
-      | John Doe | <ref(category, MyCategory)> | <ref(address, the address)> |
+      | John Doe | <foundry:ref(category, MyCategory)> | <foundry:ref(address, the address)> |
     Then 1 contact should exist
     Then 1 category should exist
     Then 1 address should exist
